@@ -57,11 +57,8 @@ const Dashboard = () => {
               <ServiceGraph data={graphData} />
             </div>
             <div className="lg:col-span-4 h-full flex flex-col gap-6">
-              <div className="flex-1 overflow-hidden min-h-[200px]">
+              <div className="flex-1 overflow-hidden h-full">
                 <RiskRanking ranking={riskRanking} />
-              </div>
-              <div className="flex-1 overflow-hidden min-h-[200px]">
-                 <HypothesisBoard hypotheses={hypotheses} />
               </div>
             </div>
           </section>
@@ -72,6 +69,7 @@ const Dashboard = () => {
               <IncidentTimeline events={timeline} />
             </div>
             <div className="lg:col-span-2 space-y-6">
+               <HypothesisBoard hypotheses={hypotheses} />
                <RootCausePanel data={rootCause} />
                <TelemetryTable data={telemetry} />
             </div>
