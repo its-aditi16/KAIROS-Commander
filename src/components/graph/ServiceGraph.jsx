@@ -38,9 +38,9 @@ const ServiceGraph = ({ data }) => {
       // Simulation
       const simulation = d3.forceSimulation(data.nodes)
         .force("link", d3.forceLink(data.links).id(d => d.id).distance(100))
-        .force("charge", d3.forceManyBody().strength(-400))
-        .force("center", d3.forceCenter(0, 0)) // Force to center (0,0)
-        .force("collide", d3.forceCollide().radius(45));
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(0, -height / 6)) // Shift center upwards to use empty space
+        .force("collide", d3.forceCollide().radius(50));
 
       // Arrow marker
       svg.append("defs").selectAll("marker")
@@ -101,6 +101,12 @@ const ServiceGraph = ({ data }) => {
         .text(d => `${d.id}\nRisk Score: ${(d.risk * 100).toFixed(0)}%`);
 
       simulation.on("tick", () => {
+        // Clamp nodes within the bounds
+        data.nodes.forEach(node => {
+          node.x = Math.max(-width / 2 + 30, Math.min(width / 2 - 30, node.x));
+          node.y = Math.max(-height / 2 + 30, Math.min(height / 2 - 30, node.y));
+        });
+
         link
           .attr("x1", d => d.source.x)
           .attr("y1", d => d.source.y)

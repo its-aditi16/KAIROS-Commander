@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useIncidentStore } from '../store/incidentStore';
-import Sidebar from '../components/layout/Sidebar';
+
 import IncidentOverview from '../components/dashboard/IncidentOverview';
 import ServiceGraph from '../components/graph/ServiceGraph';
 import TelemetryTable from '../components/dashboard/TelemetryTable';
@@ -38,9 +38,9 @@ const Dashboard = () => {
 
   return (
     <div className="flex min-h-screen bg-kairos-bg text-white overflow-hidden font-sans">
-      <Sidebar />
+      {/* Sidebar removed */}
       
-      <main className="flex-1 overflow-y-auto h-screen p-4 md:p-6 lg:p-8">
+      <main className="flex-1 overflow-y-auto h-full p-0">
         <div className="max-w-[1600px] mx-auto space-y-6">
           
           {/* Top Stats */}
@@ -52,7 +52,7 @@ const Dashboard = () => {
           </section>
 
           {/* Main Grid: Graph (Large) + hypotheses/Risk */}
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-auto lg:h-[500px] relative z-0">
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-auto lg:h-[500px] relative z-0 mb-6">
             <div className="lg:col-span-8 h-[500px] lg:h-full">
               <ServiceGraph data={graphData} />
             </div>
@@ -67,7 +67,7 @@ const Dashboard = () => {
           </section>
 
           {/* Secondary Grid: Telemetry, RCA, Timeline */}
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-20">
             <div className="lg:col-span-1 h-96">
               <IncidentTimeline events={timeline} />
             </div>

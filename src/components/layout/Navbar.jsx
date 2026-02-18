@@ -1,103 +1,110 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, Menu, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+  LayoutDashboard, 
+  Lightbulb, 
+  History, 
+  User, 
+  LogOut, 
+  Settings,
+  ShieldAlert,
+  ChevronDown
+} from 'lucide-react';
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 20) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-    };
+  const navItems = [
+    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { label: 'Hypotheses', icon: Lightbulb, path: '/hypotheses' },
+    { label: 'History', icon: History, path: '/history' },
+  ];
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const scrollToSection = (id) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-      setIsMobileMenuOpen(false);
-    }
+  const handleNavigation = (path) => {
+    navigate(path);
+    setUserMenuOpen(false);
   };
 
+  const isActive = (path) => location.pathname === path;
+
   return (
-    <nav 
-      className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
-        isScrolled ? 'bg-kairos-bg/80 backdrop-blur-md border-b border-kairos-blue/10 py-4' : 'bg-transparent py-6'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-        {/* Logo */}
-        <div 
-          className="flex items-center gap-3 cursor-pointer group" 
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        >
-          <div className="w-10 h-10 rounded bg-gradient-to-tr from-kairos-blue to-purple-600 flex items-center justify-center shadow-lg shadow-kairos-blue/20 group-hover:shadow-kairos-blue/40 transition-all duration-300">
-            <ShieldAlert size={22} className="text-white" />
-          </div>
-          <span className="text-xl font-bold tracking-wide text-white">
-            KAIROS<span className="text-kairos-blue">.AI</span>
-          </span>
+    <nav className="h-16 bg-kairos-surface/50 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-6 sticky top-0 z-50">
+      {/* Logo Area */}
+      <div 
+        className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={() => navigate('/')}
+      >
+        <div className="w-8 h-8 rounded bg-gradient-to-tr from-kairos-blue to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-kairos-blue/20">
+          <ShieldAlert size={18} className="text-white" />
         </div>
-
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-8">
-          {['How it Works', 'Our Team', 'Contact Us'].map((item) => (
-            <button
-              key={item}
-              onClick={() => scrollToSection(item.toLowerCase().replace(/\s+/g, '-'))}
-              className="text-sm font-medium text-kairos-muted hover:text-white transition-colors relative group"
-            >
-              {item}
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-kairos-blue group-hover:w-full transition-all duration-300" />
-            </button>
-          ))}
-          
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="px-5 py-2 text-sm font-bold text-kairos-bg bg-white hover:bg-kairos-blue transition-all duration-300 rounded-md shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(0,240,255,0.4)]"
-          >
-            Login
-          </button>
-        </div>
-
-        {/* Mobile Menu Button */}
-        <button 
-          className="md:hidden text-white hover:text-kairos-blue transition-colors"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        <h1 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70 tracking-wide">
+          COMMANDER
+        </h1>
       </div>
 
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 w-full bg-kairos-bg/95 backdrop-blur-xl border-b border-kairos-blue/20 p-6 flex flex-col gap-4 animate-fade-in-down">
-          {['How it Works', 'Our Team', 'Contact Us'].map((item) => (
-            <button
-              key={item}
-              onClick={() => scrollToSection(item.toLowerCase().replace(/\s+/g, '-'))}
-              className="text-left text-lg font-medium text-kairos-muted hover:text-white transition-colors py-2 border-b border-white/5"
-            >
-              {item}
-            </button>
-          ))}
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="mt-4 w-full py-3 text-center font-bold text-kairos-bg bg-kairos-blue rounded-lg hover:bg-white transition-colors"
+      {/* Center Navigation Links */}
+      <div className="flex items-center gap-6">
+        {navItems.map((item) => (
+          <button
+            key={item.label}
+            onClick={() => handleNavigation(item.path)}
+            className={twMerge(
+              "flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium",
+              isActive(item.path)
+                ? "bg-kairos-blue/10 text-kairos-blue shadow-[0_0_10px_rgba(0,240,255,0.2)]"
+                : "text-kairos-muted hover:bg-white/5 hover:text-white"
+            )}
           >
-            Login
+            <item.icon size={18} />
+            <span>{item.label}</span>
           </button>
+        ))}
+      </div>
+
+      {/* Right User/Settings Area */}
+      <div className="flex items-center gap-4">
+        {/* User Profile Dropdown */}
+        <div className="relative">
+          <button 
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className="flex items-center gap-3 hover:bg-white/5 px-2 py-1.5 rounded-lg transition-colors border border-transparent hover:border-white/5"
+          >
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-kairos-blue to-purple-500 p-[1px]">
+              <div className="w-full h-full rounded-full bg-kairos-bg flex items-center justify-center">
+                <span className="text-xs font-bold text-white">JD</span>
+              </div>
+            </div>
+            <div className="text-left hidden md:block">
+              <p className="text-sm font-medium text-white">Jane Doe</p>
+              <p className="text-xs text-kairos-muted">Lead SRE</p>
+            </div>
+            <ChevronDown size={14} className="text-kairos-muted" />
+          </button>
+
+          {userMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-48 bg-kairos-surface border border-white/10 rounded-lg shadow-xl overflow-hidden py-1 animate-in fade-in slide-in-from-top-2">
+              <button 
+                onClick={() => { console.log("Profile clicked"); setUserMenuOpen(false); }}
+                className="flex w-full items-center gap-3 px-4 py-2 text-sm text-kairos-muted hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <User size={16} />
+                My Profile
+              </button>
+              <button 
+                onClick={() => { console.log("Logout clicked"); setUserMenuOpen(false); }}
+                className="flex w-full items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+              >
+                <LogOut size={16} />
+                Logout
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </nav>
   );
 };

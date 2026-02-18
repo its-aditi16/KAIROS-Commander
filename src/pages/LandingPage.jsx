@@ -1,23 +1,32 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowRight, ShieldAlert, Activity, GitGraph, Zap } from 'lucide-react';
-import Navbar from '../components/layout/Navbar';
+
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  React.useEffect(() => {
+    if (location.hash) {
+      const element = document.getElementById(location.hash.substring(1));
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, [location]);
 
   return (
-    <div className="min-h-screen bg-kairos-bg text-white overflow-hidden relative selection:bg-kairos-blue/30">
+    <div className="min-h-[calc(100vh-80px)] bg-kairos-bg text-white overflow-hidden relative selection:bg-kairos-blue/30">
       {/* Background Gradients */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-kairos-blue/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[100px] pointer-events-none" />
 
-      <Navbar />
-
-      {/* Hero Section */}
       {/* Hero Section */}
       <main className="relative z-10">
-        <div className="flex flex-col items-center justify-center min-h-screen text-center px-4 pt-40 pb-12">
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] text-center px-4 mt-12">
           <div className="glass-panel px-4 py-1 mb-6 rounded-full border border-kairos-blue/20 inline-flex items-center gap-2 animate-fade-in-up">
             <span className="w-2 h-2 rounded-full bg-kairos-red animate-pulse"></span>
             <span className="text-xs font-mono text-kairos-blue tracking-wider">SYSTEM ONLINE // V2.4.0</span>
@@ -72,26 +81,6 @@ const LandingPage = () => {
         </div>
       </main>
 
-      {/* How it Works Section */}
-      <section id="how-it-works" className="py-24 px-6 relative bg-kairos-surface/30">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16">How <span className="text-kairos-blue">Thinking</span> Works</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {[
-              { step: "01", title: "Ingest Data", desc: "Connects to your observability stack (Prometheus, Jaeger, ELK) in minutes." },
-              { step: "02", title: "Detect Anomalies", desc: "AI models learn normal baselines and flag deviations instantly." },
-              { step: "03", title: "Automate Resolution", desc: "Suggests fixes or triggers auto-remediation workflows." }
-            ].map((item, i) => (
-              <div key={i} className="relative p-8 rounded-2xl glass-card border border-white/5 hover:border-kairos-blue/30 transition-all">
-                <span className="text-6xl font-black text-white/5 absolute -top-6 -left-4 font-sans">{item.step}</span>
-                <h3 className="text-2xl font-bold mb-4 relative z-10">{item.title}</h3>
-                <p className="text-kairos-muted relative z-10">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Our Team Section */}
       <section id="our-team" className="py-24 px-6 relative">
       <div className="max-w-7xl mx-auto">
@@ -114,8 +103,8 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Contact Us Section */}
-      <section id="contact-us" className="py-24 px-6 relative bg-gradient-to-t from-black/40 to-transparent">
+      {/* Contact Us / Community Section */}
+      <section id="community" className="py-24 px-6 relative bg-gradient-to-t from-black/40 to-transparent">
         <div className="max-w-3xl mx-auto text-center glass-panel p-12 rounded-3xl border border-white/10">
           <h2 className="text-4xl font-bold mb-6">Ready to <span className="text-kairos-blue">Upgrade</span>?</h2>
           <p className="text-kairos-muted text-lg mb-8">
@@ -131,10 +120,6 @@ const LandingPage = () => {
           </div>
         </div>
       </section>
-
-      <footer className="py-8 text-center text-kairos-muted text-sm border-t border-white/5">
-        &copy; {new Date().getFullYear()} KAIROS.AI. All systems operational.
-      </footer>
     </div>
   );
 };
