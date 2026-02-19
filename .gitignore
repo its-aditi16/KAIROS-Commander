@@ -16,6 +16,9 @@ dist-ssr
 # Claude/Cursor temporary files
 tmpclaude-*
 
+# Test outputs
+test_output.txt
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

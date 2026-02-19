@@ -31,7 +31,7 @@ const HypothesisCard = ({ hypothesis }) => {
 
 const HypothesisBoard = ({ hypotheses }) => {
   return (
-    <div className="glass-panel p-2 ">
+    <div className="glass-panel p-2">
       <div className="flex items-center gap-3 mb-2">
         <div className="p-2 bg-kairos-blue/10 rounded-lg text-kairos-blue">
           <Zap size={20} />
