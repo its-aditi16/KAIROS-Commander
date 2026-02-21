@@ -15,7 +15,7 @@ const PublicNavbar = () => {
   ];
 
   const handleNavigation = (path) => {
-     setMobileMenuOpen(false);
+    setMobileMenuOpen(false);
     if (path.startsWith('#')) {
       if (location.pathname === '/') {
         const element = document.getElementById(path.substring(1));
@@ -37,7 +37,7 @@ const PublicNavbar = () => {
   return (
     <nav className="h-16 bg-kairos-surface/50 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-6 sticky top-0 z-50">
       {/* Logo Area */}
-      <div 
+      <div
         className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
         onClick={() => navigate('/')}
       >
@@ -69,14 +69,23 @@ const PublicNavbar = () => {
 
       {/* Right Action Button & Mobile Toggle */}
       <div className="flex items-center gap-4">
-        <button 
-            onClick={() => navigate('/dashboard')}
-            className="px-4 py-2 bg-kairos-blue text-kairos-bg font-bold rounded-lg hover:bg-cyan-400 transition-colors shadow-[0_0_15px_rgba(0,240,255,0.3)] text-sm"
+        <div className="hidden md:flex items-center gap-3">
+          <button
+            onClick={() => navigate('/login')}
+            className="text-kairos-muted hover:text-white transition-colors text-sm font-medium"
+          >
+            Sign In
+          </button>
+          <div className="w-px h-4 bg-white/20"></div>
+        </div>
+        <button
+          onClick={() => navigate('/login?mode=signup')}
+          className="px-4 py-2 bg-kairos-blue text-kairos-bg font-bold rounded-lg hover:bg-cyan-400 transition-colors shadow-[0_0_15px_rgba(0,240,255,0.3)] text-sm"
         >
-            Login
+          Sign Up
         </button>
 
-        <button 
+        <button
           className="md:hidden text-kairos-muted hover:text-white"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
@@ -93,9 +102,9 @@ const PublicNavbar = () => {
               onClick={() => handleNavigation(item.path)}
               className={twMerge(
                 "w-full text-left px-4 py-3 rounded-lg transition-colors",
-                 isActive(item.path)
-                ? "bg-kairos-blue/10 text-kairos-blue"
-                : "text-kairos-muted hover:bg-white/5 hover:text-white"
+                isActive(item.path)
+                  ? "bg-kairos-blue/10 text-kairos-blue"
+                  : "text-kairos-muted hover:bg-white/5 hover:text-white"
               )}
             >
               {item.label}

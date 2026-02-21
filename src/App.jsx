@@ -10,6 +10,8 @@ import HistoryPage from './pages/HistoryPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import TeamPage from './pages/TeamPage';
 import ContactPage from './pages/ContactPage';
+import AuthPage from './pages/AuthPage';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   return (
@@ -17,6 +19,7 @@ function App() {
       <Routes>
         <Route element={<PublicLayout />}>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<AuthPage />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/team" element={<TeamPage />} />
           <Route path="/contact" element={<ContactPage />} />
@@ -27,6 +30,7 @@ function App() {
           <Route path="/dependency-graph" element={<DependencyGraphPage />} />
           <Route path="/hypotheses" element={<HypothesisPage />} />
           <Route path="/history" element={<HistoryPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Route>
       </Routes>
     </BrowserRouter>
