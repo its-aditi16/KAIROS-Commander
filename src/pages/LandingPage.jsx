@@ -55,7 +55,10 @@ const LandingPage = () => {
               <div className="absolute inset-0 rounded-lg ring-2 ring-white/20 group-hover:ring-white/40 transition-all" />
             </button>
 
-            <button className="px-8 py-4 glass-card text-white font-medium rounded-lg hover:bg-white/10 transition-all flex items-center gap-3 active:scale-95">
+            <button
+              onClick={() => navigate('/docs')}
+              className="px-8 py-4 glass-card text-white font-medium rounded-lg hover:bg-white/10 transition-all flex items-center gap-3 active:scale-95"
+            >
               View Documentation
             </button>
           </div>

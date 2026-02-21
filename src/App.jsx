@@ -12,6 +12,7 @@ import TeamPage from './pages/TeamPage';
 import ContactPage from './pages/ContactPage';
 import AuthPage from './pages/AuthPage';
 import ProfilePage from './pages/ProfilePage';
+import DocumentationPage from './pages/DocumentationPage';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/team" element={<TeamPage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/docs" element={<DocumentationPage />} />
         </Route>
         {/* Wrap dashboard and other internal pages with Layout */}
         <Route element={<Layout />}>
