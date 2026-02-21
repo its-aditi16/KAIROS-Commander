@@ -19,8 +19,33 @@ def build_graph():
 
     graph.add_edges_from(edges)
 
-    # Attach dummy telemetry values to each node
-    telemetry = {
+    telemetry = _default_telemetry()
+    for service, metrics in telemetry.items():
+        graph.nodes[service]["error_rate"] = metrics["error_rate"]
+        graph.nodes[service]["latency"] = metrics["latency"]
+        graph.nodes[service]["cpu_usage"] = metrics["cpu_usage"]
+        graph.nodes[service]["downstream_failures"] = metrics["downstream_failures"]
+
+    # Calculate blast radius and impact score for each node
+    for node in graph.nodes():
+        error_rate = graph.nodes[node].get("error_rate", 0)
+        descendants = nx.descendants(graph, node)
+        blast_radius = len(descendants)
+        graph.nodes[node]["blast_radius"] = blast_radius
+        graph.nodes[node]["impact_score"] = error_rate * (1 + blast_radius)
+
+    # Calculate betweenness centrality
+    centrality_scores = nx.betweenness_centrality(graph)
+
+    for node, score in centrality_scores.items():
+        graph.nodes[node]["centrality"] = score
+
+    return graph
+
+
+def _default_telemetry():
+    """Default telemetry for all services."""
+    return {
         "frontend": {
             "error_rate": 0.01,
             "latency": 50,
@@ -47,13 +72,36 @@ def build_graph():
         },
     }
 
-    for service, metrics in telemetry.items():
-        graph.nodes[service]["error_rate"] = metrics["error_rate"]
-        graph.nodes[service]["latency"] = metrics["latency"]
-        graph.nodes[service]["cpu_usage"] = metrics["cpu_usage"]
-        graph.nodes[service]["downstream_failures"] = metrics["downstream_failures"]
 
-    # Calculate blast radius and impact score for each node
+def build_graph_with_override(telemetry_override: dict | None = None):
+    """
+    Build graph, optionally overriding telemetry for specific services.
+    telemetry_override: Dict with service name as key, metrics dict as value.
+    """
+    graph = nx.DiGraph()
+    edges = [
+        ("frontend", "auth-service"),
+        ("auth-service", "payment-service"),
+        ("payment-service", "database"),
+    ]
+    graph.add_edges_from(edges)
+
+    telemetry = _default_telemetry()
+    if telemetry_override:
+        for svc, metrics in telemetry_override.items():
+            if svc in telemetry:
+                telemetry[svc].update(metrics)
+            else:
+                telemetry[svc] = metrics
+
+    for service, metrics in telemetry.items():
+        if service not in graph.nodes:
+            graph.add_node(service)
+        graph.nodes[service]["error_rate"] = metrics.get("error_rate", 0)
+        graph.nodes[service]["latency"] = metrics.get("latency", 0)
+        graph.nodes[service]["cpu_usage"] = metrics.get("cpu_usage", 0)
+        graph.nodes[service]["downstream_failures"] = metrics.get("downstream_failures", 0)
+
     for node in graph.nodes():
         error_rate = graph.nodes[node].get("error_rate", 0)
         descendants = nx.descendants(graph, node)
@@ -61,13 +109,38 @@ def build_graph():
         graph.nodes[node]["blast_radius"] = blast_radius
         graph.nodes[node]["impact_score"] = error_rate * (1 + blast_radius)
 
-    # Calculate betweenness centrality
     centrality_scores = nx.betweenness_centrality(graph)
-
     for node, score in centrality_scores.items():
         graph.nodes[node]["centrality"] = score
 
     return graph
+
+
+class GraphEngine:
+    """Engine for graph operations with attachable telemetry."""
+
+    def __init__(self):
+        self._telemetry_override = {}
+
+    def attach_telemetry(self, telemetry: dict):
+        """Attach/override telemetry for a service."""
+        service = telemetry.get("service")
+        if service:
+            self._telemetry_override[service] = {
+                "error_rate": telemetry.get("error_rate", 0),
+                "latency": telemetry.get("latency", 0),
+                "cpu_usage": telemetry.get("cpu", 0),
+                "downstream_failures": telemetry.get("downstream_failures", 0),
+            }
+
+    def calculate_impact(self) -> dict:
+        """Build graph with attached telemetry and return impact scores."""
+        override = self._telemetry_override if self._telemetry_override else None
+        graph = build_graph_with_override(override)
+        return {
+            node: graph.nodes[node]["impact_score"]
+            for node in graph.nodes()
+        }
 
 
 def graph_to_json(graph):

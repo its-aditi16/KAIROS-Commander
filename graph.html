@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KAIROS Dependency Graph</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+<h2>Service Dependency Graph</h2>
+
+<svg width="900" height="600"></svg>
+
+<script>
+fetch("/incident/graph")
+  .then(res => res.json())
+  .then(data => {
+
+    const svg = d3.select("svg"),
+          width = +svg.attr("width"),
+          height = +svg.attr("height");
+
+    const simulation = d3.forceSimulation(data.nodes)
+      .force("link", d3.forceLink(data.edges).id(d => d.id).distance(150))
+      .force("charge", d3.forceManyBody().strength(-500))
+      .force("center", d3.forceCenter(width / 2, height / 2));
+
+    const link = svg.append("g")
+      .selectAll("line")
+      .data(data.edges)
+      .enter()
+      .append("line")
+      .style("stroke", "#aaa");
+
+    const node = svg.append("g")
+      .selectAll("circle")
+      .data(data.nodes)
+      .enter()
+      .append("circle")
+      .attr("r", 20)
+      .style("fill", d => d.impact_score > 0.2 ? "red" : "steelblue")
+      .call(d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended));
+
+    const label = svg.append("g")
+      .selectAll("text")
+      .data(data.nodes)
+      .enter()
+      .append("text")
+      .text(d => d.id)
+      .attr("font-size", 12)
+      .attr("dx", 25)
+      .attr("dy", 5);
+
+    simulation.on("tick", () => {
+      link
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
+
+      node
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y);
+
+      label
+        .attr("x", d => d.x)
+        .attr("y", d => d.y);
+    });
+
+    function dragstarted(event) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      event.subject.fx = event.subject.x;
+      event.subject.fy = event.subject.y;
+    }
+
+    function dragged(event) {
+      event.subject.fx = event.x;
+      event.subject.fy = event.y;
+    }
+
+    function dragended(event) {
+      if (!event.active) simulation.alphaTarget(0);
+      event.subject.fx = null;
+      event.subject.fy = null;
+    }
+
+});
+</script>
+
+</body>
+</html>
