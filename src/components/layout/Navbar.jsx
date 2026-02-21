@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -13,12 +13,41 @@ import {
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { auth } from '../../firebase';
-import { signOut } from 'firebase/auth';
+import { signOut, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
+
+const db = getFirestore();
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(auth.currentUser);
+  const [userProfile, setUserProfile] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        try {
+          const snap = await getDoc(doc(db, 'users', user.uid));
+          if (snap.exists()) setUserProfile(snap.data());
+        } catch (_) {}
+      } else {
+        setUserProfile(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const displayName = currentUser?.displayName || currentUser?.email?.split('@')[0] || 'User';
+  const subtitle = userProfile?.position || userProfile?.organisation || currentUser?.email || '';
+  const initials = displayName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
   const navItems = [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
@@ -77,12 +106,12 @@ const Navbar = () => {
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-kairos-blue to-purple-500 p-[1px]">
               <div className="w-full h-full rounded-full bg-kairos-bg flex items-center justify-center">
-                <span className="text-xs font-bold text-white">JD</span>
+                <span className="text-xs font-bold text-white">{initials}</span>
               </div>
             </div>
             <div className="text-left hidden md:block">
-              <p className="text-sm font-medium text-white">Jane Doe</p>
-              <p className="text-xs text-kairos-muted">Lead SRE</p>
+              <p className="text-sm font-medium text-white">{displayName}</p>
+              <p className="text-xs text-kairos-muted">{subtitle}</p>
             </div>
             <ChevronDown size={14} className="text-kairos-muted" />
           </button>

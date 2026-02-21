@@ -1,18 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShieldAlert, Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
+import { ShieldAlert, Mail, Lock, User, Building2, Briefcase, ArrowRight, Loader2 } from 'lucide-react';
 import { auth } from '../firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import {
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    updateProfile,
+} from 'firebase/auth';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
+
+const db = getFirestore();
+
+const inputClass =
+    'w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder-kairos-muted/50 focus:outline-none focus:border-kairos-blue focus:ring-1 focus:ring-kairos-blue transition-colors';
+
+const Field = ({ label, icon: Icon, type = 'text', value, onChange, placeholder, required = true }) => (
+    <div>
+        <label className="block text-sm font-medium text-kairos-muted mb-1">{label}</label>
+        <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Icon size={18} className="text-kairos-muted/50" />
+            </div>
+            <input
+                type={type}
+                required={required}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className={inputClass}
+                placeholder={placeholder}
+            />
+        </div>
+    </div>
+);
 
 const AuthPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isLogin, setIsLogin] = useState(true);
+
+    // Form fields
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
+    const [organisation, setOrganisation] = useState('');
+    const [position, setPosition] = useState('');
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         if (params.get('mode') === 'signup') {
@@ -31,7 +66,21 @@ const AuthPage = () => {
             if (isLogin) {
                 await signInWithEmailAndPassword(auth, email, password);
             } else {
-                await createUserWithEmailAndPassword(auth, email, password);
+                const credential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = credential.user;
+
+                // Save display name to Firebase Auth profile
+                await updateProfile(user, { displayName: name });
+
+                // Save extra info to Firestore
+                await setDoc(doc(db, 'users', user.uid), {
+                    uid: user.uid,
+                    name,
+                    email,
+                    organisation,
+                    position,
+                    createdAt: new Date().toISOString(),
+                });
             }
             navigate('/dashboard');
         } catch (err) {
@@ -40,6 +89,7 @@ const AuthPage = () => {
             setLoading(false);
         }
     };
+
 
     return (
         <div className="min-h-[calc(100vh-80px)] bg-kairos-bg text-white flex items-center justify-center relative overflow-hidden py-12 px-4">
@@ -84,58 +134,50 @@ const AuthPage = () => {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Sign-up only fields */}
                     {!isLogin && (
-                        <div>
-                            <label className="block text-sm font-medium text-kairos-muted mb-1">Full Name</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <User size={18} className="text-kairos-muted/50" />
-                                </div>
-                                <input
-                                    type="text"
-                                    required
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder-kairos-muted/50 focus:outline-none focus:border-kairos-blue focus:ring-1 focus:ring-kairos-blue transition-colors"
-                                    placeholder="Jane Doe"
-                                />
-                            </div>
-                        </div>
+                        <>
+                            <Field
+                                label="Full Name"
+                                icon={User}
+                                value={name}
+                                onChange={setName}
+                                placeholder="Jane Doe"
+                            />
+                            <Field
+                                label="Organisation"
+                                icon={Building2}
+                                value={organisation}
+                                onChange={setOrganisation}
+                                placeholder="Acme Corp"
+                            />
+                            <Field
+                                label="Position / Role"
+                                icon={Briefcase}
+                                value={position}
+                                onChange={setPosition}
+                                placeholder="Lead SRE"
+                            />
+                        </>
                     )}
 
-                    <div>
-                        <label className="block text-sm font-medium text-kairos-muted mb-1">Email Address</label>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Mail size={18} className="text-kairos-muted/50" />
-                            </div>
-                            <input
-                                type="email"
-                                required
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder-kairos-muted/50 focus:outline-none focus:border-kairos-blue focus:ring-1 focus:ring-kairos-blue transition-colors"
-                                placeholder="commander@kairos.ai"
-                            />
-                        </div>
-                    </div>
+                    <Field
+                        label="Email Address"
+                        icon={Mail}
+                        type="email"
+                        value={email}
+                        onChange={setEmail}
+                        placeholder="commander@kairos.ai"
+                    />
 
-                    <div>
-                        <label className="block text-sm font-medium text-kairos-muted mb-1">Password</label>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Lock size={18} className="text-kairos-muted/50" />
-                            </div>
-                            <input
-                                type="password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder-kairos-muted/50 focus:outline-none focus:border-kairos-blue focus:ring-1 focus:ring-kairos-blue transition-colors"
-                                placeholder="••••••••"
-                            />
-                        </div>
-                    </div>
+                    <Field
+                        label="Password"
+                        icon={Lock}
+                        type="password"
+                        value={password}
+                        onChange={setPassword}
+                        placeholder="••••••••"
+                    />
 
                     {isLogin && (
                         <div className="flex justify-end">
@@ -162,7 +204,7 @@ const AuthPage = () => {
                 </form>
 
                 <div className="mt-6 text-center text-sm text-kairos-muted border-t border-white/10 pt-6">
-                    {isLogin ? "Don't have an account? " : "Already have an account? "}
+                    {isLogin ? "Don't have an account? " : 'Already have an account? '}
                     <button
                         type="button"
                         onClick={() => setIsLogin(!isLogin)}
