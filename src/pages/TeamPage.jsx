@@ -3,12 +3,10 @@ import { Github, Linkedin, Twitter } from 'lucide-react';
 
 const TeamPage = () => {
     const team = [
-        { id: 1, name: "Alex Chen", role: "Founder & CEO", bio: "Ex-Google SRE with a passion for resilient systems." },
-        { id: 2, name: "Sarah Jones", role: "CTO", bio: "AI researcher turned infrastructure engineer." },
-        { id: 3, name: "Mike Ross", role: "Lead Engineer", bio: "Full-stack wizard building the next gen of tools." },
-        { id: 4, name: "Emily White", role: "Product Designer", bio: "Crafting intuitive experiences for complex data." },
-        { id: 5, name: "David Kim", role: "Data Scientist", bio: "Teaching machines to understand chaos." },
-        { id: 6, name: "Jessica Lee", role: "Developer Advocate", bio: "Bridge between the community and the code." },
+        { id: 1, name: "Aditi Chauhan", role: "Product Architect & AI Lead", bio: "Driving the vision and intelligence behind KAIROS Commander." },
+        { id: 2, name: "Arpitha", role: "Backend & Data Pipeline Engineer", bio: "Building robust pipelines and scalable backend systems." },
+        { id: 3, name: "Ashita M", role: "ML & Anomaly Detection Engineer", bio: "Teaching machines to detect and understand anomalies in real-time." },
+        { id: 4, name: "Fatima Tayaba", role: "Frontend & Visualization Engineer", bio: "Crafting intuitive interfaces and stunning data visualizations." },
     ];
 
   return (
