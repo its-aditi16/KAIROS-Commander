@@ -11,6 +11,7 @@ import HowItWorksPage from './pages/HowItWorksPage';
 import TeamPage from './pages/TeamPage';
 import ContactPage from './pages/ContactPage';
 import AuthPage from './pages/AuthPage';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path="/dependency-graph" element={<DependencyGraphPage />} />
           <Route path="/hypotheses" element={<HypothesisPage />} />
           <Route path="/history" element={<HistoryPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Route>
       </Routes>
     </BrowserRouter>

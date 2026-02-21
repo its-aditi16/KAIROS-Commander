@@ -119,7 +119,7 @@ const Navbar = () => {
           {userMenuOpen && (
             <div className="absolute right-0 top-full mt-2 w-48 bg-kairos-surface border border-white/10 rounded-lg shadow-xl overflow-hidden py-1 animate-in fade-in slide-in-from-top-2">
               <button
-                onClick={() => { console.log("Profile clicked"); setUserMenuOpen(false); }}
+                onClick={() => { navigate('/profile'); setUserMenuOpen(false); }}
                 className="flex w-full items-center gap-3 px-4 py-2 text-sm text-kairos-muted hover:bg-white/5 hover:text-white transition-colors"
               >
                 <User size={16} />
