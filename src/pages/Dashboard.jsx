@@ -1,5 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useIncidentStore } from '../store/incidentStore';
+import { getIncidentById } from '../services/incidentService';
 
 import IncidentOverview from '../components/dashboard/IncidentOverview';
 import ServiceGraph from '../components/graph/ServiceGraph';
@@ -9,69 +11,241 @@ import RiskRanking from '../components/dashboard/RiskRanking';
 import RootCausePanel from '../components/explainability/RootCausePanel';
 import IncidentTimeline from '../components/timeline/IncidentTimeline';
 
+// ─── Map Firestore incident → dashboard component props ───────────────────────
+
+const mapMetricsToSummary = (metrics = {}) => ({
+  criticalAlerts: metrics.errorRate > 5 ? 1 : 0,
+  highErrors: metrics.errorRate ?? 0,
+  affectedServices: metrics.cpuUsage > 70 ? 3 : 1,
+  mttrEstimate: '—',
+});
+
+const mapAiAnalysisToRootCause = (aiAnalysis = {}) => ({
+  topPrediction: aiAnalysis.rootCause || 'Unknown',
+  confidence: 85,
+  explanation: `${aiAnalysis.rootCause || ''}. Impact: ${aiAnalysis.impact || ''}. Recommendation: ${aiAnalysis.recommendation || ''}`,
+  shapValues: [
+    { feature: 'Root Cause', value: 0.6 },
+    { feature: 'Impact Scope', value: 0.25 },
+    { feature: 'System Metrics', value: 0.15 },
+  ],
+});
+
+const mapAiAnalysisToHypotheses = (aiAnalysis = {}) => [
+  {
+    id: 'H1',
+    service: 'Detected Root Cause',
+    likelihood: 90,
+    reason: aiAnalysis.rootCause || 'No root cause identified',
+    confidence: 0.9,
+  },
+  {
+    id: 'H2',
+    service: 'Recommended Action',
+    likelihood: 75,
+    reason: aiAnalysis.recommendation || 'No recommendation available',
+    confidence: 0.75,
+  },
+];
+
+const mapMetricsToRiskRanking = (metrics = {}) => [
+  { service: 'CPU', likelihood: metrics.cpuUsage ?? 0 },
+  { service: 'Memory', likelihood: metrics.memoryUsage ?? 0 },
+  { service: 'Error Rate', likelihood: Math.min((metrics.errorRate ?? 0) * 8, 100) },
+  { service: 'Latency', likelihood: Math.min((metrics.requestLatency ?? 0) / 5, 100) },
+];
+
+const mapTimelineEvents = (timeline = []) =>
+  timeline.map((item, idx) => ({
+    id: idx + 1,
+    time: item.time,
+    event: item.event,
+    type: item.type || 'info',
+  }));
+
+const mapMetricsToTelemetry = (inc = {}) => {
+  const m = inc.metricsSnapshot || {};
+  return [
+    { id: 'cpu', name: 'CPU Usage', errorRate: 0, latency: '—', cpu: `${m.cpuUsage ?? 0}%`, status: m.cpuUsage > 80 ? 'critical' : m.cpuUsage > 60 ? 'warning' : 'healthy' },
+    { id: 'mem', name: 'Memory Usage', errorRate: 0, latency: '—', cpu: `${m.memoryUsage ?? 0}%`, status: m.memoryUsage > 85 ? 'critical' : m.memoryUsage > 70 ? 'warning' : 'healthy' },
+    { id: 'err', name: 'Error Rate', errorRate: m.errorRate ?? 0, latency: '—', cpu: '—', status: m.errorRate > 5 ? 'critical' : m.errorRate > 2 ? 'warning' : 'healthy' },
+    { id: 'latency', name: 'Request Latency', errorRate: 0, latency: `${m.requestLatency ?? 0}ms`, cpu: '—', status: m.requestLatency > 500 ? 'critical' : m.requestLatency > 200 ? 'warning' : 'healthy' },
+  ];
+};
+
+// ─── Historical Incident Banner ───────────────────────────────────────────────
+const HistoricalBanner = ({ incident, onBackToLive }) => (
+  <div className="mb-4 flex items-center justify-between px-4 py-3 rounded-xl bg-kairos-blue/10 border border-kairos-blue/25 text-kairos-blue text-sm">
+    <div className="flex items-center gap-2">
+      <span className="text-base">📂</span>
+      <span className="font-semibold">Viewing Historical Incident:</span>
+      <span className="font-mono">{incident.incidentId}</span>
+      <span className="text-kairos-muted">— {incident.title}</span>
+    </div>
+    <button
+      onClick={onBackToLive}
+      className="px-3 py-1 text-xs font-medium rounded-lg bg-kairos-blue/20 hover:bg-kairos-blue/30 border border-kairos-blue/30 transition-all ml-4 whitespace-nowrap"
+    >
+      ← Back to Live
+    </button>
+  </div>
+);
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 const Dashboard = () => {
-  const { 
-    loading, 
-    error, 
-    summary, 
-    telemetry, 
-    graphData, 
-    hypotheses, 
-    riskRanking, 
-    rootCause, 
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const incidentId = searchParams.get('incidentId');
+
+  // Historical incident mode state
+  const [historicalIncident, setHistoricalIncident] = useState(null);
+  const [historicalLoading, setHistoricalLoading] = useState(false);
+  const [historicalError, setHistoricalError] = useState(null);
+
+  // Live mode state (existing store)
+  const {
+    loading,
+    error,
+    summary,
+    telemetry,
+    graphData,
+    hypotheses,
+    riskRanking,
+    rootCause,
     timeline,
-    fetchAllData 
+    fetchAllData,
   } = useIncidentStore();
 
+  // ── Historical mode: fetch from Firestore ──────────────────────────────────
   useEffect(() => {
-    fetchAllData();
-    // Optional polling could be added here
-  }, [fetchAllData]);
+    if (!incidentId) {
+      setHistoricalIncident(null);
+      return;
+    }
+    setHistoricalLoading(true);
+    setHistoricalError(null);
 
-  if (loading && !summary) {
+    getIncidentById(incidentId)
+      .then((data) => {
+        if (!data) {
+          setHistoricalError(`Incident "${incidentId}" not found in Firebase.`);
+        } else {
+          setHistoricalIncident(data);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load historical incident:', err);
+        setHistoricalError('Failed to load incident data from Firebase.');
+      })
+      .finally(() => setHistoricalLoading(false));
+  }, [incidentId]);
+
+  // ── Live mode: fetch from existing mock/backend API ────────────────────────
+  useEffect(() => {
+    if (!incidentId) {
+      fetchAllData();
+    }
+  }, [incidentId, fetchAllData]);
+
+  // ── Loading states ─────────────────────────────────────────────────────────
+  if (incidentId && historicalLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-kairos-bg text-kairos-blue">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-current"></div>
+      <div className="flex flex-col items-center justify-center h-screen bg-kairos-bg text-kairos-blue gap-3">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-current" />
+        <p className="text-sm text-kairos-muted">Loading historical incident from Firebase…</p>
       </div>
     );
   }
 
+  if (!incidentId && loading && !summary) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-kairos-bg text-kairos-blue">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-current" />
+      </div>
+    );
+  }
+
+  if (historicalError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-kairos-bg text-kairos-red gap-4">
+        <p className="text-lg font-semibold">{historicalError}</p>
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="px-4 py-2 rounded-lg bg-kairos-blue/10 border border-kairos-blue/30 text-kairos-blue text-sm hover:bg-kairos-blue/20 transition-all"
+        >
+          ← Return to Live Dashboard
+        </button>
+      </div>
+    );
+  }
+
+  // ── Resolve props (historical vs. live) ────────────────────────────────────
+  const isHistorical = !!historicalIncident;
+  const displaySummary = isHistorical
+    ? mapMetricsToSummary(historicalIncident.metricsSnapshot)
+    : summary;
+  const displayTelemetry = isHistorical
+    ? mapMetricsToTelemetry(historicalIncident)
+    : telemetry;
+  const displayGraphData = isHistorical
+    ? { nodes: [], links: [] }
+    : graphData;
+  const displayHypotheses = isHistorical
+    ? mapAiAnalysisToHypotheses(historicalIncident.aiAnalysis)
+    : hypotheses;
+  const displayRiskRanking = isHistorical
+    ? mapMetricsToRiskRanking(historicalIncident.metricsSnapshot)
+    : riskRanking;
+  const displayRootCause = isHistorical
+    ? mapAiAnalysisToRootCause(historicalIncident.aiAnalysis)
+    : rootCause;
+  const displayTimeline = isHistorical
+    ? mapTimelineEvents(historicalIncident.timeline)
+    : timeline;
+
   return (
     <div className="flex min-h-screen bg-kairos-bg text-white overflow-hidden font-sans">
-      {/* Sidebar removed */}
-      
       <main className="flex-1 overflow-y-auto h-full p-0">
         <div className="max-w-[1600px] mx-auto space-y-6">
-          
+
+          {/* Historical Banner */}
+          {isHistorical && (
+            <HistoricalBanner
+              incident={historicalIncident}
+              onBackToLive={() => navigate('/dashboard')}
+            />
+          )}
+
           {/* Top Stats */}
           <section>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <span className="text-kairos-blue">●</span> Incident Overview
+              <span className="text-kairos-blue">●</span>
+              {isHistorical ? 'Incident Snapshot' : 'Incident Overview'}
             </h2>
-            <IncidentOverview data={summary} />
+            <IncidentOverview data={displaySummary} />
           </section>
 
-          {/* Main Grid: Graph (Large) + hypotheses/Risk */}
+          {/* Main Grid: Graph + Risk */}
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-auto lg:h-[500px] relative z-0 mb-6">
             <div className="lg:col-span-8 h-[500px] lg:h-full">
-              <ServiceGraph data={graphData} />
+              <ServiceGraph data={displayGraphData} />
             </div>
             <div className="lg:col-span-4 h-full flex flex-col gap-6">
               <div className="flex-1 overflow-hidden h-full">
-                <RiskRanking ranking={riskRanking} />
+                <RiskRanking ranking={displayRiskRanking} />
               </div>
             </div>
           </section>
 
-          {/* Secondary Grid: Telemetry, RCA, Timeline */}
+          {/* Secondary Grid: Timeline + Hypotheses + RCA + Telemetry */}
           <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-20">
             <div className="lg:col-span-1 h-96">
-              <IncidentTimeline events={timeline} />
+              <IncidentTimeline events={displayTimeline} />
             </div>
             <div className="lg:col-span-2 space-y-6">
-               <HypothesisBoard hypotheses={hypotheses} />
-               <RootCausePanel data={rootCause} />
-               <TelemetryTable data={telemetry} />
+              <HypothesisBoard hypotheses={displayHypotheses} />
+              <RootCausePanel data={displayRootCause} />
+              <TelemetryTable data={displayTelemetry} />
             </div>
           </section>
 
