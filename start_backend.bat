@@ -16,9 +16,9 @@ pip install fastapi uvicorn numpy pandas scikit-learn xgboost
 echo.
 
 echo Starting backend server...
-echo Server will be available at: http://localhost:8000
-echo API docs at: http://localhost:8000/docs
+echo Server will be available at: http://localhost:8001
+echo API docs at: http://localhost:8001/docs
 echo.
-python app\main.py
+python main.py
 
 pause
