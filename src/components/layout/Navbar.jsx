@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Lightbulb,
   History,
   User,
   LogOut,
@@ -32,7 +31,7 @@ const Navbar = () => {
         try {
           const snap = await getDoc(doc(db, 'users', user.uid));
           if (snap.exists()) setUserProfile(snap.data());
-        } catch (_) {}
+        } catch (_) { }
       } else {
         setUserProfile(null);
       }
@@ -51,7 +50,6 @@ const Navbar = () => {
 
   const navItems = [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { label: 'Hypotheses', icon: Lightbulb, path: '/hypotheses' },
     { label: 'History', icon: History, path: '/history' },
   ];
 

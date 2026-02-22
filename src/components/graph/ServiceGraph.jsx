@@ -37,10 +37,10 @@ const ServiceGraph = ({ data }) => {
 
       // Simulation
       const simulation = d3.forceSimulation(data.nodes)
-        .force("link", d3.forceLink(data.links).id(d => d.id).distance(100))
-        .force("charge", d3.forceManyBody().strength(-300))
-        .force("center", d3.forceCenter(0, -height / 6)) // Shift center upwards to use empty space
-        .force("collide", d3.forceCollide().radius(50));
+        .force("link", d3.forceLink(data.links).id(d => d.id).distance(150))
+        .force("charge", d3.forceManyBody().strength(-500))
+        .force("center", d3.forceCenter(0, 0))
+        .force("collide", d3.forceCollide().radius(60));
 
       // Arrow marker
       svg.append("defs").selectAll("marker")
@@ -84,7 +84,7 @@ const ServiceGraph = ({ data }) => {
         .attr("stroke", d => getRiskColor(d.risk))
         .attr("stroke-width", 2)
         .style("filter", "drop-shadow(0 0 5px rgba(0,0,0,0.5))");
-      
+
       // Icon or Label placeholder
       node.append("text")
         .text(d => d.id.replace('svc-', ''))
@@ -141,10 +141,10 @@ const ServiceGraph = ({ data }) => {
   }, [data]);
 
   return (
-    <div ref={containerRef} className="glass-panel w-[750px] h-[400px] min-h-[300px] overflow-hidden relative">
+    <div ref={containerRef} className="glass-panel w-full h-full min-h-[300px] overflow-hidden relative">
       <div className="absolute top-4 left-4 z-10 pointer-events-none">
         <h3 className="font-semibold text-white tracking-wide flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-kairos-blue animate-pulse"/>
+          <div className="w-2 h-2 rounded-full bg-kairos-blue animate-pulse" />
           Service Map
         </h3>
       </div>

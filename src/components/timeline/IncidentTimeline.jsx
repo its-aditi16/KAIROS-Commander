@@ -25,12 +25,12 @@ const TimelineItem = ({ item, isLast }) => {
       {!isLast && (
         <div className="absolute left-[11px] top-8 bottom-0 w-[2px] bg-white/10" />
       )}
-      
+
       <div className={`absolute left-0 top-1 w-6 h-6 rounded-full border-2 bg-kairos-bg flex items-center justify-center z-10 ${colors[item.type].split(' ')[0]} ${colors[item.type].split(' ')[1]}`}>
         <Icon size={12} />
       </div>
 
-      <div 
+      <div
         className="glass-card p-3 cursor-pointer"
         onClick={() => setExpanded(!expanded)}
       >
@@ -38,10 +38,10 @@ const TimelineItem = ({ item, isLast }) => {
           <span className="text-xs font-mono text-kairos-muted">{item.time}</span>
         </div>
         <p className="text-sm font-medium text-white mt-1">{item.event}</p>
-        
+
         {expanded && (
           <div className="mt-3 pt-3 border-t border-white/5 text-xs text-kairos-muted leading-relaxed">
-             Detailed logs and stack traces would appear here for deeper investigation.
+            Detailed logs and stack traces would appear here for deeper investigation.
           </div>
         )}
       </div>
@@ -59,12 +59,12 @@ const IncidentTimeline = ({ events }) => {
         <h3 className="font-semibold text-white tracking-wide">Incident Timeline</h3>
       </div>
 
-      <div className="overflow-y-auto custom-scrollbar pr-2 -mr-2">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 -mr-2">
         {events && events.map((event, index) => (
-          <TimelineItem 
-            key={event.id} 
-            item={event} 
-            isLast={index === events.length - 1} 
+          <TimelineItem
+            key={event.id}
+            item={event}
+            isLast={index === events.length - 1}
           />
         ))}
       </div>

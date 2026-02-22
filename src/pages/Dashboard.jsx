@@ -7,7 +7,6 @@ import IncidentOverview from '../components/dashboard/IncidentOverview';
 import ServiceGraph from '../components/graph/ServiceGraph';
 import TelemetryTable from '../components/dashboard/TelemetryTable';
 import HypothesisBoard from '../components/hypothesis/HypothesisBoard';
-import RiskRanking from '../components/dashboard/RiskRanking';
 import RootCausePanel from '../components/explainability/RootCausePanel';
 import IncidentTimeline from '../components/timeline/IncidentTimeline';
 
@@ -113,7 +112,7 @@ const Dashboard = () => {
     riskRanking,
     rootCause,
     timeline,
-    fetchAllData,
+    fetchAllData
   } = useIncidentStore();
 
   // ── Historical mode: fetch from Firestore ──────────────────────────────────
@@ -193,9 +192,6 @@ const Dashboard = () => {
   const displayHypotheses = isHistorical
     ? mapAiAnalysisToHypotheses(historicalIncident.aiAnalysis)
     : hypotheses;
-  const displayRiskRanking = isHistorical
-    ? mapMetricsToRiskRanking(historicalIncident.metricsSnapshot)
-    : riskRanking;
   const displayRootCause = isHistorical
     ? mapAiAnalysisToRootCause(historicalIncident.aiAnalysis)
     : rootCause;
@@ -225,30 +221,24 @@ const Dashboard = () => {
             <IncidentOverview data={displaySummary} />
           </section>
 
-          {/* Main Grid: Graph + Risk */}
+          {/* Main Grid: Service Graph + Timeline */}
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-auto lg:h-[500px] relative z-0 mb-6">
             <div className="lg:col-span-8 h-[500px] lg:h-full">
               <ServiceGraph data={displayGraphData} />
             </div>
-            <div className="lg:col-span-4 h-full flex flex-col gap-6">
-              <div className="flex-1 overflow-hidden h-full">
-                <RiskRanking ranking={displayRiskRanking} />
-              </div>
+            <div className="lg:col-span-4 h-[500px] lg:h-full overflow-hidden">
+              <IncidentTimeline events={displayTimeline} />
             </div>
           </section>
 
-          {/* Secondary Grid: Timeline + Hypotheses + RCA + Telemetry */}
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-20">
-            <div className="lg:col-span-1 h-96">
-              <IncidentTimeline events={displayTimeline} />
-            </div>
-            <div className="lg:col-span-2 space-y-6">
-              <HypothesisBoard hypotheses={displayHypotheses} />
-              <RootCausePanel data={displayRootCause} />
+          {/* Secondary Grid: Hypothesis, RCA, Telemetry */}
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-20">
+            <HypothesisBoard hypotheses={displayHypotheses} />
+            <RootCausePanel data={displayRootCause} />
+            <div className="lg:col-span-2">
               <TelemetryTable data={displayTelemetry} />
             </div>
           </section>
-
         </div>
       </main>
     </div>

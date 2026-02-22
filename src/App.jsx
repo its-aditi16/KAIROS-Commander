@@ -5,7 +5,6 @@ import LandingPage from './pages/LandingPage';
 import DependencyGraphPage from './pages/DependencyGraphPage';
 import Layout from './components/layout/Layout';
 import PublicLayout from './components/layout/PublicLayout';
-import HypothesisPage from './pages/HypothesisPage';
 import HistoryPage from './pages/HistoryPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import TeamPage from './pages/TeamPage';
@@ -30,7 +29,6 @@ function App() {
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dependency-graph" element={<DependencyGraphPage />} />
-          <Route path="/hypotheses" element={<HypothesisPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
