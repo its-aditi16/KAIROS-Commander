@@ -93,7 +93,7 @@ const LandingPage = () => {
               { name: "Aditi Chauhan", role: "Product Architect & AI Lead", initials: "AC", image: "/aditi.jpeg" },
               { name: "Arpitha", role: "Backend & Data Pipeline Engineer", initials: "AR", image: "/arpitha.png" },
               { name: "Ashita M", role: "ML & Anomaly Detection Engineer", initials: "AM", image: "/ashita.jpeg" },
-              { name: "Fatima Tayaba", role: "Frontend & Visualization Engineer", initials: "FT" },
+              { name: "Fatima Tayaba", role: "Frontend & Visualization Engineer", initials: "FT", image: "/fatima.jpeg" },
             ].map((member, i) => (
               <div key={i} className="group text-center">
                 <div className="w-40 h-40 mx-auto rounded-full bg-gradient-to-b from-gray-700 to-gray-900 mb-6 overflow-hidden relative border-2 border-transparent group-hover:border-kairos-blue transition-all">
