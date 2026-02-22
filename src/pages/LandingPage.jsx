@@ -55,7 +55,10 @@ const LandingPage = () => {
               <div className="absolute inset-0 rounded-lg ring-2 ring-white/20 group-hover:ring-white/40 transition-all" />
             </button>
 
-            <button className="px-8 py-4 glass-card text-white font-medium rounded-lg hover:bg-white/10 transition-all flex items-center gap-3 active:scale-95">
+            <button
+              onClick={() => navigate('/docs')}
+              className="px-8 py-4 glass-card text-white font-medium rounded-lg hover:bg-white/10 transition-all flex items-center gap-3 active:scale-95"
+            >
               View Documentation
             </button>
           </div>
@@ -86,17 +89,25 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto">
           <h2 className="text-4xl font-bold text-center mb-16">Meet the <span className="text-purple-500">Builders</span></h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
-            {[1, 2, 3, 4].map((member) => (
-              <div key={member} className="group text-center">
+            {[
+              { name: "Aditi Chauhan", role: "Product Architect & AI Lead", initials: "AC", image: "/aditi.jpeg" },
+              { name: "Arpitha", role: "Backend & Data Pipeline Engineer", initials: "AR", image: "/arpitha.png" },
+              { name: "Ashita M", role: "ML & Anomaly Detection Engineer", initials: "AM", image: "/ashita.jpeg" },
+              { name: "Fatima Tayaba", role: "Frontend & Visualization Engineer", initials: "FT" },
+            ].map((member, i) => (
+              <div key={i} className="group text-center">
                 <div className="w-40 h-40 mx-auto rounded-full bg-gradient-to-b from-gray-700 to-gray-900 mb-6 overflow-hidden relative border-2 border-transparent group-hover:border-kairos-blue transition-all">
-                  <div className="absolute inset-0 bg-kairos-blue/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  {/* Placeholder for team member image */}
-                  <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-white/20">
-                    TM
-                  </div>
+                  <div className="absolute inset-0 bg-kairos-blue/20 opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+                  {member.image ? (
+                    <img src={member.image} alt={member.name} className="w-full h-full object-cover object-top" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-white/30">
+                      {member.initials}
+                    </div>
+                  )}
                 </div>
-                <h3 className="text-xl font-bold">Team Member {member}</h3>
-                <p className="text-kairos-muted text-sm">Role / Title</p>
+                <h3 className="text-xl font-bold">{member.name}</h3>
+                <p className="text-kairos-muted text-sm">{member.role}</p>
               </div>
             ))}
           </div>
