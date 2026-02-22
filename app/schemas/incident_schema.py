@@ -7,3 +7,4 @@ class CustomIncidentRequest(BaseModel):
     latency: float
     cpu: float
     downstream: int
+    reset_scenario: bool = False

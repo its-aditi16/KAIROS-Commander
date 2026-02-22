@@ -1,0 +1,43 @@
+﻿{
+    "ai_hypotheses":  [
+                          {
+                              "service":  "payment-service",
+                              "confidence":  99
+                          },
+                          {
+                              "service":  "inventory-service",
+                              "confidence":  0
+                          }
+                      ],
+    "root_cause_analysis":  {
+                                "top_suspect":  "payment-service",
+                                "confidence":  99,
+                                "summary":  "The payment-service shows low error rate (0.05) and elevated latency (2500.00). SHAP analysis indicates that error rate, latency are the dominant contributors to the predicted root cause.",
+                                "feature_importance":  [
+                                                           {
+                                                               "feature":  "Error Rate",
+                                                               "impact_percent":  47.1,
+                                                               "direction":  "negative",
+                                                               "shap_value":  -6.823904514312744
+                                                           },
+                                                           {
+                                                               "feature":  "Latency",
+                                                               "impact_percent":  30.4,
+                                                               "direction":  "positive",
+                                                               "shap_value":  4.4015302658081055
+                                                           },
+                                                           {
+                                                               "feature":  "Downstream Failures",
+                                                               "impact_percent":  20.1,
+                                                               "direction":  "positive",
+                                                               "shap_value":  -2.9040534496307373
+                                                           },
+                                                           {
+                                                               "feature":  "CPU Usage",
+                                                               "impact_percent":  2.4,
+                                                               "direction":  "negative",
+                                                               "shap_value":  -0.35164257884025574
+                                                           }
+                                                       ]
+                            }
+}

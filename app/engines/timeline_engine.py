@@ -63,11 +63,15 @@ def _build_event_string(event: dict) -> str:
 
     # Special formatting for common metric types
     if metric == "latency":
-        return f"{service} {metric} spiked to {value}ms"
-    elif metric in ("error_rate", "retry_rate", "http_5xx", "request_failures"):
-        return f"{service} {metric} increased beyond threshold"
+        return f"{service} latency spiked to {value:.0f}ms"
+    elif metric == "error_rate":
+        return f"{service} error rate jumped to {value*100:.1f}%"
+    elif metric == "cpu_usage":
+        return f"{service} CPU load reached {value:.1f}%"
+    elif metric in ("retry_rate", "http_5xx", "request_failures"):
+        return f"{service} {metric} increased to {value}"
     else:
-        return f"{service} {metric} exceeded threshold (value: {value})"
+        return f"{service} {metric} exceeded threshold ({value})"
 
 
 # ---------------------------------------------------------------------------
@@ -163,15 +167,16 @@ def generate_timeline(events: list) -> list:
             continue
 
         # Determine event type (order of precedence matters)
+        # Map to UI-friendly types: critical, warning, info
         if not seen_first and event is first_anomaly_event:
-            event_type = "first_anomaly"
+            event_type = "critical" # first_anomaly is critical
             seen_first = True
         elif detect_user_impact(event):
-            event_type = "user_impact"
+            event_type = "critical" # user impact is critical
         elif detect_cascade(event, first_anomaly_event):
-            event_type = "cascade_failure"
+            event_type = "warning" # cascade is warning
         else:
-            event_type = "normal"  # anomalous but outside cascade window
+            event_type = "info" # others are info
 
         # Format the display time as HH:MM
         display_time = _parse_ts(event["timestamp"]).strftime("%H:%M")

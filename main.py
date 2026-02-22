@@ -11,6 +11,10 @@ app = FastAPI()
 
 app.include_router(incident_router)
 
+@app.get("/")
+def read_root():
+    return {"status": "KAIROS-Commander API is running", "ports": {"backend": 8001, "frontend": 5173}}
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,7 +31,10 @@ def get_graph():
     G = build_graph()
     return graph_to_json(G)
 
-# ✅ UI PAGE
 @app.get("/graph")
 def serve_graph():
     return FileResponse(BASE_DIR / "graph.html")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)

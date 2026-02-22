@@ -37,10 +37,10 @@ const ServiceGraph = ({ data }) => {
 
       // Simulation
       const simulation = d3.forceSimulation(data.nodes)
-        .force("link", d3.forceLink(data.links).id(d => d.id).distance(100))
-        .force("charge", d3.forceManyBody().strength(-300))
-        .force("center", d3.forceCenter(0, -height / 6)) // Shift center upwards to use empty space
-        .force("collide", d3.forceCollide().radius(50));
+        .force("link", d3.forceLink(data.links).id(d => d.id).distance(150)) // Increased distance
+        .force("charge", d3.forceManyBody().strength(-600)) // Stronger repulsion
+        .force("center", d3.forceCenter(0, 0)) // Center it properly
+        .force("collide", d3.forceCollide().radius(70)); // Larger collision radius
 
       // Arrow marker
       svg.append("defs").selectAll("marker")
@@ -48,7 +48,7 @@ const ServiceGraph = ({ data }) => {
         .enter().append("marker")
         .attr("id", "arrow")
         .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 25)
+        .attr("refX", 22) // Adjusted for circle radius 20
         .attr("refY", 0)
         .attr("markerWidth", 6)
         .attr("markerHeight", 6)
@@ -84,17 +84,19 @@ const ServiceGraph = ({ data }) => {
         .attr("stroke", d => getRiskColor(d.risk))
         .attr("stroke-width", 2)
         .style("filter", "drop-shadow(0 0 5px rgba(0,0,0,0.5))");
-      
-      // Icon or Label placeholder
+
+      // Label outside node for readability
       node.append("text")
-        .text(d => d.id.replace('svc-', ''))
+        .text(d => d.id)
         .attr("x", 0)
-        .attr("y", 5)
+        .attr("y", 35) // Position below the node
         .attr("text-anchor", "middle")
         .attr("fill", "#fff")
-        .attr("font-size", "10px")
-        .attr("font-family", "monospace")
-        .style("pointer-events", "none");
+        .attr("font-size", "12px")
+        .attr("font-weight", "500")
+        .attr("font-family", "Inter, sans-serif")
+        .style("pointer-events", "none")
+        .style("text-shadow", "0 0 3px rgba(0,0,0,1)");
 
       // Tooltip behavior
       node.append("title")
@@ -104,7 +106,7 @@ const ServiceGraph = ({ data }) => {
         // Clamp nodes within the bounds
         data.nodes.forEach(node => {
           node.x = Math.max(-width / 2 + 30, Math.min(width / 2 - 30, node.x));
-          node.y = Math.max(-height / 2 + 30, Math.min(height / 2 - 30, node.y));
+          node.y = Math.max(-height / 2 + 30, Math.min(height / 2 - 50, node.y)); // Extra padding for label
         });
 
         link
@@ -144,7 +146,7 @@ const ServiceGraph = ({ data }) => {
     <div ref={containerRef} className="glass-panel w-[750px] h-[400px] min-h-[300px] overflow-hidden relative">
       <div className="absolute top-4 left-4 z-10 pointer-events-none">
         <h3 className="font-semibold text-white tracking-wide flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-kairos-blue animate-pulse"/>
+          <div className="w-2 h-2 rounded-full bg-kairos-blue animate-pulse" />
           Service Map
         </h3>
       </div>

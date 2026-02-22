@@ -1,5 +1,13 @@
 import networkx as nx
 
+# Global state to persist telemetry changes during scenarios
+_global_telemetry = {
+    "frontend": {"error_rate": 0.01, "latency": 50, "cpu_usage": 30, "downstream_failures": 0},
+    "auth-service": {"error_rate": 0.01, "latency": 80, "cpu_usage": 40, "downstream_failures": 0},
+    "payment-service": {"error_rate": 0.01, "latency": 100, "cpu_usage": 50, "downstream_failures": 0},
+    "database": {"error_rate": 0.01, "latency": 30, "cpu_usage": 20, "downstream_failures": 0},
+}
+
 
 def build_graph():
     """
@@ -19,20 +27,24 @@ def build_graph():
 
     graph.add_edges_from(edges)
 
-    telemetry = _default_telemetry()
-    for service, metrics in telemetry.items():
-        graph.nodes[service]["error_rate"] = metrics["error_rate"]
-        graph.nodes[service]["latency"] = metrics["latency"]
-        graph.nodes[service]["cpu_usage"] = metrics["cpu_usage"]
-        graph.nodes[service]["downstream_failures"] = metrics["downstream_failures"]
+    graph.add_edges_from(edges)
+
+    # Use global telemetry state instead of static defaults
+    for service, metrics in _global_telemetry.items():
+        if service not in graph:
+            graph.add_node(service)
+        graph.nodes[service].update(metrics)
 
     # Calculate blast radius and impact score for each node
+    max_possible_impact = len(graph.nodes()) if len(graph.nodes()) > 0 else 1.0
     for node in graph.nodes():
         error_rate = graph.nodes[node].get("error_rate", 0)
         descendants = nx.descendants(graph, node)
         blast_radius = len(descendants)
         graph.nodes[node]["blast_radius"] = blast_radius
-        graph.nodes[node]["impact_score"] = error_rate * (1 + blast_radius)
+        # Normalize impact score to 0-1 range based on total possible blast radius
+        raw_impact = error_rate * (1 + blast_radius)
+        graph.nodes[node]["impact_score"] = min(1.0, raw_impact / max_possible_impact)
 
     # Calculate betweenness centrality
     centrality_scores = nx.betweenness_centrality(graph)
@@ -53,21 +65,21 @@ def _default_telemetry():
             "downstream_failures": 0,
         },
         "auth-service": {
-            "error_rate": 0.05,
-            "latency": 120,
-            "cpu_usage": 60,
-            "downstream_failures": 2,
+            "error_rate": 0.01,
+            "latency": 80,
+            "cpu_usage": 40,
+            "downstream_failures": 0,
         },
         "payment-service": {
-            "error_rate": 0.15,
-            "latency": 300,
-            "cpu_usage": 85,
-            "downstream_failures": 8,
+            "error_rate": 0.01,
+            "latency": 100,
+            "cpu_usage": 50,
+            "downstream_failures": 0,
         },
         "database": {
-            "error_rate": 0.02,
-            "latency": 80,
-            "cpu_usage": 45,
+            "error_rate": 0.01,
+            "latency": 30,
+            "cpu_usage": 20,
             "downstream_failures": 0,
         },
     }
@@ -102,12 +114,15 @@ def build_graph_with_override(telemetry_override: dict | None = None):
         graph.nodes[service]["cpu_usage"] = metrics.get("cpu_usage", 0)
         graph.nodes[service]["downstream_failures"] = metrics.get("downstream_failures", 0)
 
+    max_possible_impact = len(graph.nodes()) if len(graph.nodes()) > 0 else 1.0
     for node in graph.nodes():
         error_rate = graph.nodes[node].get("error_rate", 0)
         descendants = nx.descendants(graph, node)
         blast_radius = len(descendants)
         graph.nodes[node]["blast_radius"] = blast_radius
-        graph.nodes[node]["impact_score"] = error_rate * (1 + blast_radius)
+        # Normalize impact score to 0-1 range based on total possible blast radius
+        raw_impact = error_rate * (1 + blast_radius)
+        graph.nodes[node]["impact_score"] = min(1.0, raw_impact / max_possible_impact)
 
     centrality_scores = nx.betweenness_centrality(graph)
     for node, score in centrality_scores.items():
@@ -123,24 +138,29 @@ class GraphEngine:
         self._telemetry_override = {}
 
     def attach_telemetry(self, telemetry: dict):
-        """Attach/override telemetry for a service."""
+        """Attach/override telemetry for a service and persist it globally."""
         service = telemetry.get("service")
         if service:
-            self._telemetry_override[service] = {
+            metrics = {
                 "error_rate": telemetry.get("error_rate", 0),
                 "latency": telemetry.get("latency", 0),
                 "cpu_usage": telemetry.get("cpu", 0),
                 "downstream_failures": telemetry.get("downstream_failures", 0),
             }
+            _global_telemetry[service] = metrics
 
     def calculate_impact(self) -> dict:
-        """Build graph with attached telemetry and return impact scores."""
-        override = self._telemetry_override if self._telemetry_override else None
-        graph = build_graph_with_override(override)
+        """Build graph with current global telemetry and return impact scores."""
+        graph = build_graph()  # Now uses global state
         return {
-            node: graph.nodes[node]["impact_score"]
+            node: graph.nodes[node].get("impact_score", 0)
             for node in graph.nodes()
         }
+
+    def reset_telemetry(self):
+        """Restore global telemetry to default healthy values."""
+        global _global_telemetry
+        _global_telemetry.update(_default_telemetry())
 
 
 def graph_to_json(graph):

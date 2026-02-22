@@ -1,176 +1,301 @@
 import axios from "axios";
 
-// Mock data
-const MOCK_INCIDENT_SUMMARY = {
-  criticalAlerts: 3,
-  highErrors: 12,
-  affectedServices: 5,
-  mttrEstimate: "45m",
-};
+// API base - use proxy in dev so /api -> backend
+const API_BASE = "/api";
 
-const MOCK_TELEMETRY = [
-  {
-    id: "svc-auth",
-    name: "Auth Service",
-    errorRate: 0.15,
-    latency: "120ms",
-    cpu: "45%",
-    status: "healthy",
-  },
-  {
-    id: "svc-payment",
-    name: "Payment Gateway",
-    errorRate: 2.5,
-    latency: "850ms",
-    cpu: "92%",
-    status: "critical",
-  },
-  {
-    id: "svc-order",
-    name: "Order Service",
-    errorRate: 0.8,
-    latency: "210ms",
-    cpu: "65%",
-    status: "warning",
-  },
-  {
-    id: "svc-inventory",
-    name: "Inventory DB",
-    errorRate: 0.05,
-    latency: "45ms",
-    cpu: "30%",
-    status: "healthy",
-  },
-  {
-    id: "svc-notif",
-    name: "Notification Svc",
-    errorRate: 1.2,
-    latency: "320ms",
-    cpu: "55%",
-    status: "warning",
-  },
-];
+const client = axios.create({
+  baseURL: API_BASE,
+  timeout: 15000,
+  headers: { "Content-Type": "application/json" },
+});
 
-const MOCK_GRAPH_DATA = {
-  nodes: [
-    { id: "svc-auth", group: 1, risk: 0.1 },
-    { id: "svc-payment", group: 2, risk: 0.9 }, // High risk
-    { id: "svc-order", group: 2, risk: 0.6 },
-    { id: "svc-inventory", group: 3, risk: 0.2 },
-    { id: "svc-notif", group: 4, risk: 0.4 },
-  ],
-  links: [
-    { source: "svc-auth", target: "svc-order" },
-    { source: "svc-order", target: "svc-payment" },
-    { source: "svc-order", target: "svc-inventory" },
-    { source: "svc-payment", target: "svc-notif" },
-    { source: "svc-inventory", target: "svc-notif" },
-  ],
-};
+// Transform backend graph (nodes/edges) to frontend format (nodes/links with risk)
+function transformGraphData(backendGraph) {
+  if (!backendGraph?.nodes?.length) return { nodes: [], links: [] };
 
-const MOCK_HYPOTHESES = [
-  {
-    id: "H1",
-    service: "Payment Gateway",
-    likelihood: 92,
-    reason: "High latency correlate with DB locks",
-    confidence: 0.92,
-  },
-  {
-    id: "H2",
-    service: "Order Service",
-    likelihood: 65,
-    reason: "Retry storm detected",
-    confidence: 0.65,
-  },
-  {
-    id: "H3",
-    service: "Auth Service",
-    likelihood: 30,
-    reason: "Token validation timeout",
-    confidence: 0.3,
-  },
-];
+  const nodes = backendGraph.nodes.map((n) => ({
+    id: n.id,
+    risk: Math.min(1, (n.impact_score || 0) / 0.5), // normalize: 0.5 impact ≈ 100% risk
+  }));
 
-const MOCK_RISK_RANKING = [
-  { service: "Payment Gateway", likelihood: 92 },
-  { service: "Order Service", likelihood: 65 },
-  { service: "Notification Svc", likelihood: 45 },
-  { service: "Auth Service", likelihood: 15 },
-];
+  const links = (backendGraph.edges || []).map((e) => ({
+    source: e.source,
+    target: e.target,
+  }));
 
-const MOCK_ROOT_CAUSE = {
-  topPrediction: "Payment Gateway",
-  confidence: 92,
-  explanation:
-    'The Payment Gateway is experiencing high latency (850ms) and error rates (2.5%) consistent with database lock contention. SHAP analysis indicates that "DB Connection Pool Saturation" is the primary contributing factor.',
-  shapValues: [
-    { feature: "DB Locks", value: 0.45 },
-    { feature: "High Latency", value: 0.25 },
-    { feature: "Error Rate", value: 0.15 },
-    { feature: "CPU Usage", value: 0.1 },
-    { feature: "Memory", value: 0.05 },
-  ],
-};
+  return { nodes, links };
+}
 
-const MOCK_TIMELINE = [
-  {
-    id: 1,
-    time: "10:45:00",
-    event: "Alert Triggered: Payment Gateway Latency > 500ms",
-    type: "critical",
-  },
-  {
-    id: 2,
-    time: "10:45:30",
-    event: "Automated scaledown of non-critical jobs",
-    type: "info",
-  },
-  {
-    id: 3,
-    time: "10:46:15",
-    event: "Error rate spiked to 5% in Order Service",
-    type: "warning",
-  },
-  { id: 4, time: "10:47:00", event: "AI Analysis Started", type: "info" },
-  {
-    id: 5,
-    time: "10:47:45",
-    event: "Hypothesis H1 Generated: DB Locks",
-    type: "success",
-  },
-];
+// Derive summary from graph nodes
+function deriveSummary(nodes) {
+  if (!nodes?.length) return { criticalAlerts: 0, highErrors: 0, affectedServices: 0, mttrEstimate: "—" };
+  const critical = nodes.filter((n) => (n.impact_score || 0) > 0.2).length;
+  const highErrors = nodes.filter((n) => (n.error_rate || 0) > 0.1).length;
+  return {
+    criticalAlerts: critical,
+    highErrors: highErrors || nodes.length,
+    affectedServices: nodes.length,
+    mttrEstimate: critical > 2 ? "60m" : "45m",
+  };
+}
 
-// Mock API Delay
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// Derive telemetry from graph nodes
+function deriveTelemetry(nodes) {
+  if (!nodes?.length) return [];
+  return nodes.map((n, i) => {
+    const impact = n.impact_score || 0;
+    const latency = n.latency || 0;
+    const errorRate = n.error_rate || 0;
+
+    let status = "healthy";
+
+    // AI Impact Score Hierarchy
+    if (impact > 0.15) status = "critical";
+    else if (impact > 0.05) status = "warning";
+
+    // Direct Metric Overrides (Ensure UI reacts to even small anomalies)
+    if (latency >= 1000 || errorRate >= 0.1) status = "critical";
+    else if (latency >= 400 || errorRate >= 0.05) {
+      // Don't downgrade if already critical
+      if (status !== "critical") status = "warning";
+    }
+
+    return {
+      id: n.id,
+      name: n.id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      errorRate: ((n.error_rate || 0) * 100).toFixed(1),
+      latency: `${n.latency || 0}ms`,
+      cpu: `${n.cpu_usage || 0}%`,
+      downstream: n.downstream_failures || 0,
+      status,
+    };
+  });
+}
+
+// Transform timeline backend format to frontend format
+function transformTimeline(backendTimeline) {
+  if (!Array.isArray(backendTimeline)) return [];
+  const typeMap = { first_anomaly: "critical", cascade_failure: "critical", user_impact: "warning", normal: "info" };
+  return backendTimeline.map((e, i) => ({
+    id: i + 1,
+    time: e.time,
+    event: e.event,
+    type: typeMap[e.type] || "info",
+  }));
+}
+
+// Transform analyze response to hypotheses, riskRanking, rootCause
+function transformAnalyzeResponse(analyze) {
+  const hypotheses = (analyze.ai_hypotheses || []).map((h, i) => ({
+    id: `H${i + 1}`,
+    service: h.service,
+    likelihood: h.confidence,
+    reason: "ML model prediction based on telemetry",
+    confidence: h.confidence / 100,
+  }));
+
+  const riskRanking = (analyze.ai_hypotheses || []).map((h) => ({
+    service: h.service,
+    likelihood: h.confidence,
+  }));
+
+  const rca = analyze.root_cause_analysis || {};
+  const rootCause = rca.top_suspect
+    ? {
+      topPrediction: rca.top_suspect,
+      confidence: rca.confidence || 0,
+      explanation: rca.summary || "Analysis pending.",
+      shapValues: (rca.feature_importance || []).map((f) => ({
+        feature: f.feature,
+        value: (f.impact_percent || 0) / 100,
+      })),
+    }
+    : null;
+
+  return { hypotheses, riskRanking, rootCause };
+}
 
 export const api = {
+  injectIncident: async (service, metrics) => {
+    const payload = {
+      service,
+      error_rate: metrics.error_rate || 0,
+      latency: metrics.latency || 0,
+      cpu: metrics.cpu || 0,
+      downstream: metrics.downstream || 0,
+      reset_scenario: metrics.reset_scenario || false,
+    };
+    return await client.post("/incident/inject", payload);
+  },
+
   getIncidentSummary: async () => {
-    await delay(500);
-    return MOCK_INCIDENT_SUMMARY;
+    const { data } = await client.get("/incident/graph");
+    return deriveSummary(data?.nodes || []);
   },
+
   getTelemetry: async () => {
-    await delay(600);
-    return MOCK_TELEMETRY;
+    const { data } = await client.get("/incident/graph");
+    return deriveTelemetry(data?.nodes || []);
   },
+
   getGraphData: async () => {
-    await delay(700);
-    return MOCK_GRAPH_DATA;
+    const { data } = await client.get("/incident/graph");
+    return transformGraphData(data);
   },
+
   getHypotheses: async () => {
-    await delay(500);
-    return MOCK_HYPOTHESES;
+    const graphRes = await client.get("/incident/graph");
+    const nodes = graphRes.data?.nodes || [];
+    const services = {};
+    nodes.forEach((n) => {
+      services[n.id] = {
+        error_rate: n.error_rate ?? 0.1,
+        latency: n.latency ?? 100,
+        cpu_usage: n.cpu_usage ?? 50,
+        downstream_failures: n.downstream_failures ?? 0,
+      };
+    });
+    if (Object.keys(services).length === 0) return [];
+    try {
+      const { data } = await client.post("/incident/analyze", { services });
+      return transformAnalyzeResponse(data).hypotheses;
+    } catch {
+      return [];
+    }
   },
+
   getRiskRanking: async () => {
-    await delay(400);
-    return MOCK_RISK_RANKING;
+    const graphRes = await client.get("/incident/graph");
+    const nodes = graphRes.data?.nodes || [];
+    const services = {};
+    nodes.forEach((n) => {
+      services[n.id] = {
+        error_rate: n.error_rate ?? 0.1,
+        latency: n.latency ?? 100,
+        cpu_usage: n.cpu_usage ?? 50,
+        downstream_failures: n.downstream_failures ?? 0,
+      };
+    });
+    if (Object.keys(services).length === 0) return [];
+    try {
+      const { data } = await client.post("/incident/analyze", { services });
+      return transformAnalyzeResponse(data).riskRanking;
+    } catch {
+      return nodes
+        .map((n) => ({ service: n.id, likelihood: Math.round((n.impact_score || 0) * 100) }))
+        .sort((a, b) => b.likelihood - a.likelihood);
+    }
   },
+
   getRootCause: async () => {
-    await delay(800);
-    return MOCK_ROOT_CAUSE;
+    const graphRes = await client.get("/incident/graph");
+    const nodes = graphRes.data?.nodes || [];
+    const services = {};
+    nodes.forEach((n) => {
+      services[n.id] = {
+        error_rate: n.error_rate ?? 0.1,
+        latency: n.latency ?? 100,
+        cpu_usage: n.cpu_usage ?? 50,
+        downstream_failures: n.downstream_failures ?? 0,
+      };
+    });
+    if (Object.keys(services).length === 0) return null;
+    try {
+      const { data } = await client.post("/incident/analyze", { services });
+      return transformAnalyzeResponse(data).rootCause;
+    } catch {
+      const top = nodes.sort((a, b) => (b.impact_score || 0) - (a.impact_score || 0))[0];
+      return top
+        ? {
+          topPrediction: top.id,
+          confidence: Math.round((top.impact_score || 0) * 100),
+          explanation: `High impact score (${(top.impact_score || 0).toFixed(2)}) from graph analysis.`,
+          shapValues: [
+            { feature: "Error Rate", value: 0.35 },
+            { feature: "Latency", value: 0.25 },
+            { feature: "CPU Usage", value: 0.2 },
+            { feature: "Downstream Failures", value: 0.2 },
+          ],
+        }
+        : null;
+    }
   },
+
   getTimeline: async () => {
-    await delay(300);
-    return MOCK_TIMELINE;
+    try {
+      const { data } = await client.get("/incident/timeline");
+      return transformTimeline(data?.timeline || []);
+    } catch {
+      return [];
+    }
+  },
+
+  resetSystem: async () => {
+    return await client.post("/incident/reset");
+  },
+
+  // Single optimized fetch for dashboard - one graph, one analyze, one timeline
+  fetchDashboardData: async () => {
+    const [graphRes, timelineRes] = await Promise.all([
+      client.get("/incident/graph"),
+      client.get("/incident/timeline").catch(() => ({ data: { timeline: [] } })),
+    ]);
+
+    const nodes = graphRes.data?.nodes || [];
+    const summary = deriveSummary(nodes);
+    const telemetry = deriveTelemetry(nodes);
+    const graphData = transformGraphData(graphRes.data);
+    const timeline = transformTimeline(timelineRes.data?.timeline || []);
+
+    const services = {};
+    nodes.forEach((n) => {
+      services[n.id] = {
+        error_rate: n.error_rate ?? 0.1,
+        latency: n.latency ?? 100,
+        cpu_usage: n.cpu_usage ?? 50,
+        downstream_failures: n.downstream_failures ?? 0,
+      };
+    });
+
+    let hypotheses = [];
+    let riskRanking = [];
+    let rootCause = null;
+    if (Object.keys(services).length > 0) {
+      try {
+        const { data } = await client.post("/incident/analyze", { services });
+        const transformed = transformAnalyzeResponse(data);
+        hypotheses = transformed.hypotheses;
+        riskRanking = transformed.riskRanking;
+        rootCause = transformed.rootCause;
+      } catch {
+        riskRanking = nodes
+          .map((n) => ({ service: n.id, likelihood: Math.round((n.impact_score || 0) * 100) }))
+          .sort((a, b) => b.likelihood - a.likelihood);
+        const top = nodes.sort((a, b) => (b.impact_score || 0) - (a.impact_score || 0))[0];
+        rootCause = top
+          ? {
+            topPrediction: top.id,
+            confidence: Math.round((top.impact_score || 0) * 100),
+            explanation: `High impact score from graph analysis.`,
+            shapValues: [
+              { feature: "Error Rate", value: 0.35 },
+              { feature: "Latency", value: 0.25 },
+              { feature: "CPU Usage", value: 0.2 },
+              { feature: "Downstream Failures", value: 0.2 },
+            ],
+          }
+          : null;
+      }
+    }
+
+    return {
+      summary,
+      telemetry,
+      graphData,
+      hypotheses,
+      riskRanking,
+      rootCause,
+      timeline,
+    };
   },
 };
