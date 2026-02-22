@@ -62,7 +62,7 @@ const IncidentTimeline = ({ events }) => {
         <h3 className="font-semibold text-white tracking-wide">Incident Timeline</h3>
       </div>
 
-      <div className="overflow-y-auto custom-scrollbar pr-2 -mr-2">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 -mr-2">
         {events && events.map((event, index) => (
           <TimelineItem
             key={event.id}

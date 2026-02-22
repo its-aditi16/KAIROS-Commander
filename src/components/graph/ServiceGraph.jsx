@@ -143,7 +143,7 @@ const ServiceGraph = ({ data }) => {
   }, [data]);
 
   return (
-    <div ref={containerRef} className="glass-panel w-[750px] h-[400px] min-h-[300px] overflow-hidden relative">
+    <div ref={containerRef} className="glass-panel w-full h-full min-h-[300px] overflow-hidden relative">
       <div className="absolute top-4 left-4 z-10 pointer-events-none">
         <h3 className="font-semibold text-white tracking-wide flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-kairos-blue animate-pulse" />
