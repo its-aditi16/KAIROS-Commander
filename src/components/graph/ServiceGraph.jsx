@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 
-const ServiceGraph = ({ data }) => {
+const ServiceGraph = ({ data, onNodeClick }) => {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -72,10 +72,37 @@ const ServiceGraph = ({ data }) => {
         .selectAll("g")
         .data(data.nodes)
         .join("g")
-        .call(d3.drag()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended));
+        .style("cursor", "pointer");
+
+      // D3 drag absorbs all pointer events including clicks.
+      // We detect a "click" by measuring drag distance: < 5px = click, >= 5px = real drag.
+      let dragStartX = 0;
+      let dragStartY = 0;
+      node.call(
+        d3.drag()
+          .on("start", function(event) {
+            dragStartX = event.x;
+            dragStartY = event.y;
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            event.subject.fx = event.subject.x;
+            event.subject.fy = event.subject.y;
+          })
+          .on("drag", function(event) {
+            event.subject.fx = event.x;
+            event.subject.fy = event.y;
+          })
+          .on("end", function(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            event.subject.fx = null;
+            event.subject.fy = null;
+            // If total movement < 5px it was a click, not a drag
+            const dx = event.x - dragStartX;
+            const dy = event.y - dragStartY;
+            if (Math.sqrt(dx * dx + dy * dy) < 5 && onNodeClick) {
+              onNodeClick(d.id);
+            }
+          })
+      );
 
       // Cell background (Glassmorphism circle)
       node.append("circle")
@@ -119,28 +146,13 @@ const ServiceGraph = ({ data }) => {
           .attr("transform", d => `translate(${d.x},${d.y})`);
       });
 
-      function dragstarted(event) {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        event.subject.fx = event.subject.x;
-        event.subject.fy = event.subject.y;
-      }
-
-      function dragged(event) {
-        event.subject.fx = event.x;
-        event.subject.fy = event.y;
-      }
-
-      function dragended(event) {
-        if (!event.active) simulation.alphaTarget(0);
-        event.subject.fx = null;
-        event.subject.fy = null;
-      }
     };
 
     return () => {
       resizeObserver.disconnect();
     };
-  }, [data]);
+  }, [data, onNodeClick]);
+
 
   return (
     <div ref={containerRef} className="glass-panel w-full h-full min-h-[300px] overflow-hidden relative">

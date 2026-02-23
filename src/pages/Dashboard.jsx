@@ -272,13 +272,32 @@ const Dashboard = () => {
           </section>
 
           {/* Secondary Grid: Hypotheses, RCA, Telemetry */}
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-20 pb-12">
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-20">
             <HypothesisBoard hypotheses={displayHypotheses} />
             <RootCausePanel data={displayRootCause} />
             <div className="lg:col-span-2">
               <TelemetryTable data={displayTelemetry} />
             </div>
           </section>
+
+          {/* Service Log Buttons */}
+          {!isHistorical && (
+            <section className="pb-10">
+              <p className="text-xs text-white/40 uppercase tracking-widest mb-3">View Service Logs</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {['frontend', 'auth-service', 'payment-service', 'database'].map(svc => (
+                  <a
+                    key={svc}
+                    href={`/logs/${svc}`}
+                    className="flex items-center justify-between gap-2 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-kairos-blue/10 hover:border-kairos-blue/30 text-white/80 hover:text-kairos-blue text-sm font-medium transition-all"
+                  >
+                    <span className="capitalize">{svc.replace(/-/g, ' ')}</span>
+                    <span className="text-xs text-white/30 hover:text-kairos-blue/60">→ logs</span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       </main>
 

@@ -234,6 +234,11 @@ export const api = {
     return await client.post("/incident/reset");
   },
 
+  getServiceLogs: async (serviceId) => {
+    const { data } = await client.get(`/incident/logs/${serviceId}`);
+    return data.logs;
+  },
+
   // Single optimized fetch for dashboard - one graph, one analyze, one timeline
   fetchDashboardData: async () => {
     const [graphRes, timelineRes] = await Promise.all([

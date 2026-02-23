@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { X, Zap, Rocket, Activity, Clock, Cpu, Server, Edit2, RefreshCw } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Zap, Rocket, Activity, Clock, Cpu, Server, Edit2, RefreshCw, FileWarning, Upload } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 
 const InjectIncidentDrawer = ({ isOpen, onClose, onInject, loading, currentTelemetry }) => {
     const [service, setService] = useState('frontend');
+    const [defectiveFile, setDefectiveFile] = useState(null);  // holds filename string
+    const fileInputRef = useRef(null);
     const [metrics, setMetrics] = useState({
         error_rate: 0.1,
         latency: 500,
@@ -38,7 +40,7 @@ const InjectIncidentDrawer = ({ isOpen, onClose, onInject, loading, currentTelem
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        onInject(service, metrics);
+        onInject(service, { ...metrics, defective_file: service === 'frontend' ? defectiveFile : null });
     };
 
     if (!isOpen) return null;
@@ -105,7 +107,54 @@ const InjectIncidentDrawer = ({ isOpen, onClose, onInject, loading, currentTelem
                             </div>
                         </div>
 
-                        {/* Sliders Area */}
+                        {/* Defective File — system file picker, only for Frontend */}
+                        {service === 'frontend' && (
+                            <div className="space-y-3">
+                                <label className="text-sm font-medium text-kairos-muted flex items-center gap-2">
+                                    <FileWarning size={14} className="text-orange-400" /> DEFECTIVE FILE
+                                </label>
+
+                                {/* Hidden native file input */}
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    className="hidden"
+                                    onChange={e => {
+                                        const file = e.target.files?.[0];
+                                        if (file) setDefectiveFile(file.name);
+                                    }}
+                                />
+
+                                {/* Custom styled trigger button */}
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-orange-500/40 bg-orange-500/5 hover:bg-orange-500/10 hover:border-orange-500/60 transition-all text-left group"
+                                >
+                                    <Upload size={16} className="text-orange-400 shrink-0 group-hover:scale-110 transition-transform" />
+                                    <span className={`text-sm truncate ${defectiveFile ? 'text-orange-300 font-medium' : 'text-white/40'}`}>
+                                        {defectiveFile ?? 'Click to browse file from your system…'}
+                                    </span>
+                                </button>
+
+                                {defectiveFile && (
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[11px] text-orange-400/70 flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse inline-block" />
+                                            Error logs will reference <strong className="text-orange-300">{defectiveFile}</strong> as root cause
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setDefectiveFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                                            className="text-[10px] text-white/30 hover:text-white/60 transition-colors"
+                                        >
+                                            clear
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="space-y-8 pt-4">
                             {/* Error Rate */}
                             <div className="space-y-4">

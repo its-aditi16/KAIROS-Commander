@@ -12,6 +12,7 @@ import ContactPage from './pages/ContactPage';
 import AuthPage from './pages/AuthPage';
 import ProfilePage from './pages/ProfilePage';
 import DocumentationPage from './pages/DocumentationPage';
+import ServiceLogsPage from './pages/ServiceLogsPage';
 
 function App() {
   return (
@@ -32,6 +33,8 @@ function App() {
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
+        {/* Full-screen log viewer — no Layout wrapper */}
+        <Route path="/logs/:serviceId" element={<ServiceLogsPage />} />
       </Routes>
     </BrowserRouter>
   );

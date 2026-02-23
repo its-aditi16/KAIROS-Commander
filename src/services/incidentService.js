@@ -116,3 +116,35 @@ export const subscribeToIncidents = (callback) => {
 export const saveIncidentToFirebase = async (incidentData) => {
   return createIncident(incidentData);
 };
+
+// ─── Service Logs ──────────────────────────────────────────────────────────────
+
+const SERVICE_LOGS_COLLECTION = "serviceLogs";
+
+/**
+ * Overwrite the logs for a given service in Firestore.
+ * @param {string} serviceId
+ * @param {Array} logs
+ */
+export const saveServiceLogsToFirebase = async (serviceId, logs) => {
+  const { setDoc } = await import("firebase/firestore");
+  const ref = doc(db, SERVICE_LOGS_COLLECTION, serviceId);
+  await setDoc(ref, {
+    serviceId,
+    logs,
+    updatedAt: serverTimestamp(),
+  });
+};
+
+/**
+ * Fetch the logs for a given service from Firestore.
+ * @param {string} serviceId
+ * @returns {Array} logs array
+ */
+export const getServiceLogsFromFirebase = async (serviceId) => {
+  const ref = doc(db, SERVICE_LOGS_COLLECTION, serviceId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return [];
+  return snap.data().logs || [];
+};
+

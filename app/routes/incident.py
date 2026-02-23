@@ -204,3 +204,47 @@ async def get_incident_timeline():
         return {"timeline": timeline}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Timeline generation failed: {str(e)}")
+
+@router.get("/incident/logs/{service_id}")
+async def get_service_logs(service_id: str):
+    from app.engines.graph_engine import _global_telemetry
+    import random
+    from datetime import datetime, timedelta
+
+    if service_id not in _global_telemetry:
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    metrics = _global_telemetry[service_id]
+    error_rate = metrics.get("error_rate", 0)
+    latency = metrics.get("latency", 0)
+    
+    logs = []
+    now = datetime.now()
+    
+    # Generate 15-20 logs
+    for i in range(20):
+        ts = (now - timedelta(seconds=i * 2)).strftime("%H:%M:%S.%f")[:-3]
+        is_error = random.random() < error_rate
+        
+        level = "INFO"
+        message = f"Request processed in {random.randint(int(latency*0.8), int(latency*1.2))}ms"
+        
+        if is_error:
+            level = "ERROR"
+            error_types = ["ConnectionTimeout", "InternalServerError", "DatabaseQueryError", "AuthenticationFailed"]
+            message = f"Critical Error: {random.choice(error_types)} - upstream dependency failure"
+        
+        logs.append({
+            "timestamp": ts,
+            "level": level,
+            "message": message,
+            "isError": is_error
+        })
+    
+    # Ensure at least one error log if error_rate is high but random didn't catch it
+    if error_rate > 0.1 and not any(l["isError"] for l in logs):
+        logs[0]["level"] = "ERROR"
+        logs[0]["message"] = "Critical Error: Service unavailable due to high error rate"
+        logs[0]["isError"] = True
+        
+    return {"service_id": service_id, "logs": logs}
