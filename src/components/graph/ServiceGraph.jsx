@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 
-const ServiceGraph = ({ data }) => {
+const ServiceGraph = ({ data, blastRadius }) => {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -12,7 +12,7 @@ const ServiceGraph = ({ data }) => {
     const resizeObserver = new ResizeObserver(entries => {
       for (let entry of entries) {
         const { width, height } = entry.contentRect;
-        if (width === 0 || height === 0) return;
+        if (width <= 0 || height <= 0) return;
 
         // Re-initialize graph on resize
         d3.select(svgRef.current).selectAll("*").remove();
@@ -23,24 +23,43 @@ const ServiceGraph = ({ data }) => {
     resizeObserver.observe(containerRef.current);
 
     const initGraph = (width, height) => {
+      // Clone data to avoid mutating frozen props which causes React crashes
+      const nodes = data.nodes.map(d => ({ ...d }));
+      const links = (data.links || []).map(d => ({ ...d }));
+
       const svg = d3.select(svgRef.current)
         .attr("width", width)
         .attr("height", height)
         .attr("viewBox", [-width / 2, -height / 2, width, height]);
 
+      // Blast Radius state
+      const isRoot = (id) => id && blastRadius?.root_service === id;
+      const isImpacted = (id) => id && blastRadius?.downstream_services?.includes(id);
+
       // Risk colors
-      const getRiskColor = (risk) => {
-        if (risk > 0.8) return "#FF2A6D"; // Critical
-        if (risk > 0.5) return "#FF9F1C"; // Warning
-        return "#05D5AA"; // Healthy
+      const getSeverityColor = (severity) => {
+        if (severity === 'Critical') return "#FF2A6D";
+        if (severity === 'High') return "#FF9F1C";
+        if (severity === 'Medium') return "#FFD700";
+        return "#05D5AA";
+      };
+
+      const getNodeColor = (d) => {
+        if (isRoot(d.id)) return "#FF2A6D";
+        if (isImpacted(d.id)) return getSeverityColor(blastRadius?.severity_level);
+
+        const risk = d.risk || 0;
+        if (risk > 0.8) return "#FF2A6D";
+        if (risk > 0.5) return "#FF9F1C";
+        return "#05D5AA";
       };
 
       // Simulation
-      const simulation = d3.forceSimulation(data.nodes)
-        .force("link", d3.forceLink(data.links).id(d => d.id).distance(150)) // Increased distance
-        .force("charge", d3.forceManyBody().strength(-600)) // Stronger repulsion
-        .force("center", d3.forceCenter(0, 0)) // Center it properly
-        .force("collide", d3.forceCollide().radius(70)); // Larger collision radius
+      const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(150))
+        .force("charge", d3.forceManyBody().strength(-600))
+        .force("center", d3.forceCenter(0, 0))
+        .force("collide", d3.forceCollide().radius(70));
 
       // Arrow marker
       svg.append("defs").selectAll("marker")
@@ -48,7 +67,7 @@ const ServiceGraph = ({ data }) => {
         .enter().append("marker")
         .attr("id", "arrow")
         .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 22) // Adjusted for circle radius 20
+        .attr("refX", 22)
         .attr("refY", 0)
         .attr("markerWidth", 6)
         .attr("markerHeight", 6)
@@ -62,51 +81,72 @@ const ServiceGraph = ({ data }) => {
         .attr("stroke", "#475569")
         .attr("stroke-opacity", 0.6)
         .selectAll("line")
-        .data(data.links)
+        .data(links)
         .join("line")
-        .attr("stroke-width", 2)
+        .attr("stroke", d => {
+          const sourceId = (d.source && typeof d.source === 'object') ? d.source.id : d.source;
+          if (isRoot(sourceId) || isImpacted(sourceId)) return "#FF2A6D";
+          return "#475569";
+        })
+        .attr("stroke-opacity", d => {
+          const sourceId = (d.source && typeof d.source === 'object') ? d.source.id : d.source;
+          if (isRoot(sourceId) || isImpacted(sourceId)) return 1;
+          return 0.6;
+        })
+        .attr("stroke-width", d => {
+          const sourceId = (d.source && typeof d.source === 'object') ? d.source.id : d.source;
+          if (isImpacted(sourceId) || isRoot(sourceId)) return 3;
+          return 2;
+        })
         .attr("marker-end", "url(#arrow)");
 
       // Node Groups
       const node = svg.append("g")
         .selectAll("g")
-        .data(data.nodes)
+        .data(nodes)
         .join("g")
         .call(d3.drag()
           .on("start", dragstarted)
           .on("drag", dragged)
           .on("end", dragended));
 
-      // Cell background (Glassmorphism circle)
-      node.append("circle")
+      // Cell background with pulsing for root
+      const circles = node.append("circle")
         .attr("r", 20)
         .attr("fill", "#1e293b")
-        .attr("stroke", d => getRiskColor(d.risk))
-        .attr("stroke-width", 2)
-        .style("filter", "drop-shadow(0 0 5px rgba(0,0,0,0.5))");
+        .attr("stroke", d => getNodeColor(d))
+        .attr("stroke-width", d => isRoot(d.id) ? 4 : 2)
+        .style("filter", d => isRoot(d.id) ? "drop-shadow(0 0 10px #FF2A6D)" : "drop-shadow(0 0 5px rgba(0,0,0,0.5))");
 
-      // Label outside node for readability
+      // Pulsing animation for root
+      circles.filter(d => isRoot(d.id))
+        .append("animate")
+        .attr("attributeName", "r")
+        .attr("values", "20;24;20")
+        .attr("dur", "1.5s")
+        .attr("repeatCount", "indefinite");
+
+      // Label
       node.append("text")
         .text(d => d.id)
         .attr("x", 0)
-        .attr("y", 35) // Position below the node
+        .attr("y", 35)
         .attr("text-anchor", "middle")
         .attr("fill", "#fff")
         .attr("font-size", "12px")
-        .attr("font-weight", "500")
+        .attr("font-weight", d => isRoot(d.id) ? "bold" : "500")
         .attr("font-family", "Inter, sans-serif")
         .style("pointer-events", "none")
         .style("text-shadow", "0 0 3px rgba(0,0,0,1)");
 
-      // Tooltip behavior
+      // Tooltip
       node.append("title")
-        .text(d => `${d.id}\nRisk Score: ${(d.risk * 100).toFixed(0)}%`);
+        .text(d => `${d.id}${isRoot(d.id) ? ' (ROOT CAUSE)' : ''}\nRisk Score: ${(d.risk * 100).toFixed(0)}%`);
 
       simulation.on("tick", () => {
-        // Clamp nodes within the bounds
-        data.nodes.forEach(node => {
-          node.x = Math.max(-width / 2 + 30, Math.min(width / 2 - 30, node.x));
-          node.y = Math.max(-height / 2 + 30, Math.min(height / 2 - 50, node.y)); // Extra padding for label
+        nodes.forEach(n => {
+          n.x = Math.max(-width / 2 + 30, Math.min(width / 2 - 30, n.x));
+          n.y = Math.max(-height / 2 + 30, Math.min(height / 2 - 50, n.y));
         });
 
         link
@@ -140,7 +180,7 @@ const ServiceGraph = ({ data }) => {
     return () => {
       resizeObserver.disconnect();
     };
-  }, [data]);
+  }, [data, blastRadius]);
 
   return (
     <div ref={containerRef} className="glass-panel w-full h-full min-h-[300px] overflow-hidden relative">

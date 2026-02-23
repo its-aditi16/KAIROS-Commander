@@ -2,10 +2,10 @@ import networkx as nx
 
 # Global state to persist telemetry changes during scenarios
 _global_telemetry = {
-    "frontend": {"error_rate": 0.01, "latency": 50, "cpu_usage": 30, "downstream_failures": 0},
-    "auth-service": {"error_rate": 0.01, "latency": 80, "cpu_usage": 40, "downstream_failures": 0},
-    "payment-service": {"error_rate": 0.01, "latency": 100, "cpu_usage": 50, "downstream_failures": 0},
-    "database": {"error_rate": 0.01, "latency": 30, "cpu_usage": 20, "downstream_failures": 0},
+    "frontend": {"error_rate": 0.01, "latency": 50, "cpu_usage": 30, "downstream_failures": 0, "traffic_volume": 15000, "business_criticality_score": 5, "sla_tier": 1},
+    "auth-service": {"error_rate": 0.01, "latency": 80, "cpu_usage": 40, "downstream_failures": 0, "traffic_volume": 12000, "business_criticality_score": 5, "sla_tier": 1},
+    "payment-service": {"error_rate": 0.01, "latency": 100, "cpu_usage": 50, "downstream_failures": 0, "traffic_volume": 8000, "business_criticality_score": 5, "sla_tier": 1},
+    "database": {"error_rate": 0.01, "latency": 30, "cpu_usage": 20, "downstream_failures": 0, "traffic_volume": 5000, "business_criticality_score": 4, "sla_tier": 2},
 }
 
 
@@ -63,24 +63,36 @@ def _default_telemetry():
             "latency": 50,
             "cpu_usage": 30,
             "downstream_failures": 0,
+            "traffic_volume": 15000, 
+            "business_criticality_score": 5, 
+            "sla_tier": 1
         },
         "auth-service": {
             "error_rate": 0.01,
             "latency": 80,
             "cpu_usage": 40,
             "downstream_failures": 0,
+            "traffic_volume": 12000, 
+            "business_criticality_score": 5, 
+            "sla_tier": 1
         },
         "payment-service": {
             "error_rate": 0.01,
             "latency": 100,
             "cpu_usage": 50,
             "downstream_failures": 0,
+            "traffic_volume": 8000, 
+            "business_criticality_score": 5, 
+            "sla_tier": 1
         },
         "database": {
             "error_rate": 0.01,
             "latency": 30,
             "cpu_usage": 20,
             "downstream_failures": 0,
+            "traffic_volume": 5000, 
+            "business_criticality_score": 4, 
+            "sla_tier": 2
         },
     }
 
@@ -113,6 +125,9 @@ def build_graph_with_override(telemetry_override: dict | None = None):
         graph.nodes[service]["latency"] = metrics.get("latency", 0)
         graph.nodes[service]["cpu_usage"] = metrics.get("cpu_usage", 0)
         graph.nodes[service]["downstream_failures"] = metrics.get("downstream_failures", 0)
+        graph.nodes[service]["traffic_volume"] = metrics.get("traffic_volume", 1000)
+        graph.nodes[service]["business_criticality_score"] = metrics.get("business_criticality_score", 3)
+        graph.nodes[service]["sla_tier"] = metrics.get("sla_tier", 3)
 
     max_possible_impact = len(graph.nodes()) if len(graph.nodes()) > 0 else 1.0
     for node in graph.nodes():

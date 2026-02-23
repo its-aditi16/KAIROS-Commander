@@ -92,6 +92,30 @@ const HistoricalBanner = ({ incident, onBackToLive }) => (
   </div>
 );
 
+const SimilarityMatch = ({ matches }) => {
+  if (!matches || matches.length === 0) return null;
+  return (
+    <div className="mt-4 pt-4 border-t border-white/5">
+      <h4 className="text-[10px] font-bold text-kairos-muted uppercase tracking-wider mb-2">Historical Similarity</h4>
+      <div className="space-y-2">
+        {matches.map((match) => (
+          <div key={match.incident_id} className="flex items-center justify-between group">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-kairos-blue/10 text-kairos-blue border border-kairos-blue/20 font-mono">
+                {match.similarity}%
+              </span>
+              <span className="text-xs text-white/80 group-hover:text-white transition-colors">
+                similar to: <span className="font-medium">{match.name}</span>
+              </span>
+            </div>
+            <span className="text-[10px] text-kairos-muted font-mono">{match.incident_id}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 const Dashboard = () => {
   const [searchParams] = useSearchParams();
@@ -114,6 +138,8 @@ const Dashboard = () => {
     riskRanking,
     rootCause,
     timeline,
+    similarMatches,
+    blastRadius,
     fetchAllData,
     injectIncident,
     resetSystem
@@ -264,7 +290,7 @@ const Dashboard = () => {
           {/* Main Grid: Graph (Large) + Timeline */}
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-auto lg:h-[500px] relative z-0 mb-6">
             <div className="lg:col-span-8 h-[500px] lg:h-full">
-              <ServiceGraph data={displayGraphData} />
+              <ServiceGraph data={displayGraphData} blastRadius={blastRadius} />
             </div>
             <div className="lg:col-span-4 h-full flex flex-col overflow-hidden">
               <IncidentTimeline events={displayTimeline} />
@@ -274,7 +300,7 @@ const Dashboard = () => {
           {/* Secondary Grid: Hypotheses, RCA, Telemetry */}
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-20 pb-12">
             <HypothesisBoard hypotheses={displayHypotheses} />
-            <RootCausePanel data={displayRootCause} />
+            <RootCausePanel data={displayRootCause ? { ...displayRootCause, similarMatches, blastRadius } : null} />
             <div className="lg:col-span-2">
               <TelemetryTable data={displayTelemetry} />
             </div>

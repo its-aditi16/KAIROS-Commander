@@ -12,6 +12,8 @@ export const useIncidentStore = create((set, get) => ({
   riskRanking: [],
   rootCause: null,
   timeline: [],
+  similarMatches: [],
+  blastRadius: null,
 
   fetchAllData: async () => {
     set({ loading: true, error: null });
@@ -34,8 +36,24 @@ export const useIncidentStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       await api.injectIncident(service, metrics);
-      // Automatically refresh dashboard after injection
-      await get().fetchAllData();
+
+      // Fetch fresh data and similarity score in parallel
+      const [dashData, similarityMatches] = await Promise.all([
+        api.fetchDashboardData(),
+        api.getSimilarityMatches({
+          service,
+          error_rate: metrics.error_rate || 0,
+          latency: metrics.latency || 0,
+          cpu: metrics.cpu || 0,
+          downstream: metrics.downstream || 0
+        })
+      ]);
+
+      set({
+        ...dashData,
+        similarMatches: similarityMatches,
+        loading: false,
+      });
     } catch (err) {
       console.error("Failed to inject incident", err);
       set({ error: "Failed to simulate incident", loading: false });

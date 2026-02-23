@@ -99,6 +99,14 @@ class AnalyzeRequest(BaseModel):
     services: Dict[str, ServiceFeatures]
 
 
+class SimilarityRequest(BaseModel):
+    service: str
+    error_rate: float
+    latency: float
+    cpu: float
+    downstream: int
+
+
 @router.post("/incident/retrain")
 async def retrain_model():
     from app.engines.ml_model import train_model
@@ -124,6 +132,8 @@ async def analyze_incident(request: AnalyzeRequest):
     import pandas as pd
     from app.engines.ml_model import train_model
     from app.engines.explainability import generate_explainability
+    from app.engines.blast_radius import estimate_blast_radius
+    from app.engines.graph_engine import build_graph
 
     try:
         model = train_model()
@@ -180,15 +190,55 @@ async def analyze_incident(request: AnalyzeRequest):
         for p in predictions:
             ai_hypotheses.append({"service": p["service"], "confidence": p["confidence"]})
         
+        # 5. Estimate Blast Radius for the top suspect
+        graph = build_graph()
+        blast_radius = estimate_blast_radius(graph, top["service"])
+
         return {
             "ai_hypotheses": ai_hypotheses,
-            "root_cause_analysis": explain_result
+            "root_cause_analysis": explain_result,
+            "blast_radius": blast_radius
         }
         
     except Exception as e:
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+@router.post("/incident/similarity")
+async def get_incident_similarity(request: SimilarityRequest):
+    from app.engines.similarity_engine import similarity_engine
+    from app.engines.graph_engine import GraphEngine
+    
+    try:
+        # 1. Calculate impact score dynamically for the current incident context
+        ge = GraphEngine()
+        ge.attach_telemetry({
+            "service": request.service,
+            "error_rate": request.error_rate,
+            "latency": request.latency,
+            "cpu": request.cpu,
+            "downstream_failures": request.downstream
+        })
+        impact_scores = ge.calculate_impact()
+        
+        current_data = {
+            "cpu": request.cpu,
+            "latency": request.latency,
+            "error_rate": request.error_rate,
+            "downstream": request.downstream,
+            "impact_score": impact_scores.get(request.service, 0)
+        }
+        
+        matches = similarity_engine.find_similar_incidents(current_data)
+        
+        return {
+            "current_incident": request.service,
+            "similar_matches": matches
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Similarity lookup failed: {str(e)}")
 
 
 @router.get("/incident/timeline")

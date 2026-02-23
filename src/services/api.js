@@ -90,7 +90,7 @@ function transformAnalyzeResponse(analyze) {
     id: `H${i + 1}`,
     service: h.service,
     likelihood: h.confidence,
-    reason: "ML model prediction based on telemetry",
+    reason: `AI predicts ${h.confidence}% probability that ${h.service} is the root cause based on anomaly propagation.`,
     confidence: h.confidence / 100,
   }));
 
@@ -112,7 +112,7 @@ function transformAnalyzeResponse(analyze) {
     }
     : null;
 
-  return { hypotheses, riskRanking, rootCause };
+  return { hypotheses, riskRanking, rootCause, blastRadius: analyze.blast_radius || null };
 }
 
 export const api = {
@@ -230,6 +230,16 @@ export const api = {
     }
   },
 
+  getSimilarityMatches: async (incidentData) => {
+    try {
+      const { data } = await client.post("/incident/similarity", incidentData);
+      return data.similar_matches || [];
+    } catch (err) {
+      console.error("Similarity lookup failed", err);
+      return [];
+    }
+  },
+
   resetSystem: async () => {
     return await client.post("/incident/reset");
   },
@@ -260,10 +270,11 @@ export const api = {
     let hypotheses = [];
     let riskRanking = [];
     let rootCause = null;
+    let transformed = null;
     if (Object.keys(services).length > 0) {
       try {
         const { data } = await client.post("/incident/analyze", { services });
-        const transformed = transformAnalyzeResponse(data);
+        transformed = transformAnalyzeResponse(data);
         hypotheses = transformed.hypotheses;
         riskRanking = transformed.riskRanking;
         rootCause = transformed.rootCause;
@@ -295,6 +306,7 @@ export const api = {
       hypotheses,
       riskRanking,
       rootCause,
+      blastRadius: transformed?.blastRadius || null,
       timeline,
     };
   },

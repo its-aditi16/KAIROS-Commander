@@ -1,0 +1,82 @@
+[
+    {
+        "incident_id": "INC001",
+        "name": "Database Latency Spike",
+        "service": "database",
+        "cpu": 85,
+        "latency": 3100,
+        "error_rate": 0.03,
+        "downstream": 3,
+        "impact_score": 0.82
+    },
+    {
+        "incident_id": "INC002",
+        "name": "Frontend Error Surge",
+        "service": "frontend",
+        "cpu": 45,
+        "latency": 450,
+        "error_rate": 0.25,
+        "downstream": 1,
+        "impact_score": 0.75
+    },
+    {
+        "incident_id": "INC003",
+        "name": "Auth Service CPU Overload",
+        "service": "auth-service",
+        "cpu": 98,
+        "latency": 1200,
+        "error_rate": 0.01,
+        "downstream": 0,
+        "impact_score": 0.65
+    },
+    {
+        "incident_id": "INC004",
+        "name": "Payment Gateway Timeout",
+        "service": "payment-service",
+        "cpu": 30,
+        "latency": 4800,
+        "error_rate": 0.15,
+        "downstream": 4,
+        "impact_score": 0.90
+    },
+    {
+        "incident_id": "INC005",
+        "name": "Database Connection Pool Exhaustion",
+        "service": "database",
+        "cpu": 60,
+        "latency": 800,
+        "error_rate": 0.12,
+        "downstream": 2,
+        "impact_score": 0.70
+    },
+    {
+        "incident_id": "INC006",
+        "name": "Slow Storage I/O",
+        "service": "database",
+        "cpu": 35,
+        "latency": 2500,
+        "error_rate": 0.02,
+        "downstream": 1,
+        "impact_score": 0.55
+    },
+    {
+        "incident_id": "INC007",
+        "name": "Auth Token Validation Failure",
+        "service": "auth-service",
+        "cpu": 25,
+        "latency": 300,
+        "error_rate": 0.45,
+        "downstream": 0,
+        "impact_score": 0.80
+    },
+    {
+        "incident_id": "INC008",
+        "name": "Payment API Rate Limiting",
+        "service": "payment-service",
+        "cpu": 20,
+        "latency": 1500,
+        "error_rate": 0.35,
+        "downstream": 2,
+        "impact_score": 0.85
+    }
+]
